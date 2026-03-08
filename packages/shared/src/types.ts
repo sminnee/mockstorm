@@ -28,6 +28,8 @@ export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
   createdAt: string;
+  conceptId?: string;
+  screenId?: string;
 }
 
 export interface ToolCallInfo {
@@ -41,7 +43,7 @@ export interface ToolCallInfo {
 
 export type ClientMessage =
   | { type: "workspaceUpdate"; title?: string; description?: string }
-  | { type: "chatSend"; content: string }
+  | { type: "chatSend"; content: string; conceptId?: string; screenId?: string }
   | { type: "chatStop" };
 
 export type ServerMessage =
