@@ -2,6 +2,7 @@ import { readFile, unlink } from "node:fs/promises";
 import Anthropic from "@anthropic-ai/sdk";
 import type { ViewportPreset } from "@mockstorm/shared";
 import type { Renderer } from "./renderer";
+import { wireframeCss } from "./wireframe-css";
 
 const WIREFRAME_REFERENCE = `
 ## Wireframe Class Reference
@@ -76,7 +77,7 @@ annotation          Dashed-border note box
 annotation-inline   Small inline margin note
 `;
 
-const RENDER_AGENT_SYSTEM = `You are a specialist HTML wireframe renderer. Your job is to generate clean HTML mockups using the wireframe utility classes provided.
+const RENDER_AGENT_SYSTEM = `You are a specialist HTML wireframe renderer. You generate grayscale wireframe mockups using ONLY the utility classes from the wireframe CSS framework below.
 
 Instructions:
 1. Generate HTML using the wireframe classes below. Always wrap content in a <div class="screen">.
@@ -85,8 +86,20 @@ Instructions:
 4. You may iterate up to 3 times (render → review → edit).
 5. When you are satisfied with the result, respond with a brief text summary of what the screen shows.
 
-Keep mockups clean and minimal. Use placeholder classes for images, charts, and media. Use shell classes for page-level layout, and layout utilities (stack, grid, split, cluster) for content arrangement.
-${WIREFRAME_REFERENCE}`;
+IMPORTANT RULES:
+- Do NOT write any custom CSS, inline styles, or \`<style>\` blocks. Every visual element must use framework classes.
+- Use placeholder-* classes for images, charts, media — never use \`<img>\` tags or real content.
+- Use shell classes for page-level layout, and layout utilities (stack, grid, split, cluster) for content arrangement.
+- Keep mockups clean and minimal.
+
+${WIREFRAME_REFERENCE}
+
+## Full CSS Source
+The complete CSS source is included below so you can see exactly what each class does:
+
+\`\`\`css
+${wireframeCss}
+\`\`\``;
 
 const anthropic = new Anthropic();
 
@@ -134,8 +147,9 @@ export async function runRenderAgent(params: {
   viewport: ViewportPreset;
   renderer: Renderer;
   existingHtml?: string;
+  onProgress?: (step: string) => void;
 }): Promise<{ html: string; summary: string }> {
-  const { slug, conceptId, instructions, viewport, renderer, existingHtml } = params;
+  const { slug, conceptId, instructions, viewport, renderer, existingHtml, onProgress } = params;
 
   let currentHtml = existingHtml ?? "";
   const tempScreenId = `temp-render-${Date.now()}`;
@@ -177,6 +191,8 @@ export async function runRenderAgent(params: {
 
   const messages: Anthropic.Messages.MessageParam[] = [{ role: "user", content: userPrompt }];
 
+  let renderCount = 0;
+
   // Tool loop — run until model responds with just text (no tool calls)
   for (let iteration = 0; iteration < 6; iteration++) {
     const response = await anthropic.messages.create({
@@ -209,6 +225,7 @@ export async function runRenderAgent(params: {
 
     if (toolUseBlocks.length === 0) {
       // Done — return final HTML and summary
+      console.log(`[render-agent] complete after ${iteration + 1} iteration(s)`);
       return {
         html: currentHtml,
         summary: textParts.join("") || "Screen rendered successfully.",
@@ -223,6 +240,14 @@ export async function runRenderAgent(params: {
 
     for (const tool of toolUseBlocks) {
       if (tool.name === "render_preview") {
+        renderCount++;
+        const stepDesc =
+          renderCount === 1
+            ? "render_preview: rendering initial HTML"
+            : "render_preview: re-rendering after edits";
+        console.log(`[render-agent] iteration ${iteration + 1}: ${tool.name}`);
+        onProgress?.(stepDesc);
+
         const input = tool.input as { html: string };
         try {
           const content = await renderPreview(input.html);
@@ -240,6 +265,9 @@ export async function runRenderAgent(params: {
           });
         }
       } else if (tool.name === "edit_html") {
+        console.log(`[render-agent] iteration ${iteration + 1}: ${tool.name}`);
+        onProgress?.("edit_html: adjusting layout");
+
         const input = tool.input as { old_text: string; new_text: string };
         if (!currentHtml.includes(input.old_text)) {
           toolResults.push({

@@ -419,6 +419,16 @@ async function runToolLoop(
             viewport,
             renderer,
             ...(existingHtml !== undefined ? { existingHtml } : {}),
+            onProgress: (step) => {
+              hub.broadcast(slug, {
+                type: "chatToolCall",
+                messageId,
+                toolName: "render_screen",
+                args: tool.input,
+                result: step,
+                conceptId: input.concept_id,
+              });
+            },
           });
 
           let resultText: string;
