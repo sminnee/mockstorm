@@ -11,5 +11,13 @@ export default defineConfig({
     hmr: {
       port: Number(process.env.FRONTEND_HMR_PORT) || 5174,
     },
+    proxy: {
+      "/api": `http://localhost:${process.env.SERVER_PORT || 3001}`,
+      "/ws": {
+        target: `http://localhost:${process.env.SERVER_PORT || 3001}`,
+        ws: true,
+        rewriteWsOrigin: true,
+      },
+    },
   },
 });

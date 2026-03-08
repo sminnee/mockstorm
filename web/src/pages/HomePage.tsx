@@ -12,7 +12,7 @@ export function HomePage() {
     if (!name.trim()) return;
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:3001/api/workspaces", {
+      const res = await fetch("/api/workspaces", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: name.trim() }),
