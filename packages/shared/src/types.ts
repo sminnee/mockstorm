@@ -6,11 +6,35 @@ export interface Workspace {
   createdAt: string;
 }
 
+export interface Screen {
+  id: string;
+  title: string;
+  description: string;
+  html: string;
+  thumbnailUrl: string | null;
+  createdAt: string;
+}
+
+export interface Concept {
+  id: string;
+  title: string;
+  description: string;
+  screens: Screen[];
+  createdAt: string;
+}
+
 export interface ChatMessage {
   id: string;
   role: "user" | "assistant";
   content: string;
   createdAt: string;
+}
+
+export interface ToolCallInfo {
+  messageId: string;
+  toolName: string;
+  args: Record<string, unknown>;
+  result: string;
 }
 
 export type ClientMessage =
@@ -26,4 +50,20 @@ export type ServerMessage =
   | { type: "chatStreamStart"; messageId: string }
   | { type: "chatStreamChunk"; messageId: string; delta: string }
   | { type: "chatStreamEnd"; messageId: string; content: string }
-  | { type: "chatError"; error: string };
+  | { type: "chatError"; error: string }
+  | { type: "conceptsInit"; concepts: Concept[] }
+  | { type: "conceptAdded"; concept: Concept }
+  | { type: "screenAdded"; conceptId: string; screen: Screen }
+  | {
+      type: "screenThumbnailReady";
+      conceptId: string;
+      screenId: string;
+      thumbnailUrl: string;
+    }
+  | {
+      type: "chatToolCall";
+      messageId: string;
+      toolName: string;
+      args: Record<string, unknown>;
+      result: string;
+    };

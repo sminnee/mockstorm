@@ -1,17 +1,21 @@
 import { Box, Paper, ScrollArea, Text } from "@mantine/core";
-import type { ChatMessage } from "@mockstorm/shared";
+import type { ChatMessage, ToolCallInfo } from "@mockstorm/shared";
 import { useRef } from "react";
+import { ToolCallIndicator } from "./ToolCallIndicator";
 
-export function ChatMessageList({ messages }: { messages: ChatMessage[] }) {
+interface ChatMessageListProps {
+  messages: ChatMessage[];
+  toolCalls: Map<string, ToolCallInfo[]>;
+}
+
+export function ChatMessageList({ messages, toolCalls }: ChatMessageListProps) {
   const viewport = useRef<HTMLDivElement>(null);
   const prevLenRef = useRef(0);
 
-  // Scroll to bottom when messages change (on every render where length/content changed)
   const lastMessage = messages[messages.length - 1];
   const currentTrigger = lastMessage ? messages.length + lastMessage.content.length : 0;
   if (currentTrigger !== prevLenRef.current) {
     prevLenRef.current = currentTrigger;
-    // Use queueMicrotask so the DOM has updated
     queueMicrotask(() => {
       viewport.current?.scrollTo({ top: viewport.current.scrollHeight });
     });
@@ -25,9 +29,14 @@ export function ChatMessageList({ messages }: { messages: ChatMessage[] }) {
           mb="xs"
           style={{
             display: "flex",
-            justifyContent: msg.role === "user" ? "flex-end" : "flex-start",
+            flexDirection: "column",
+            alignItems: msg.role === "user" ? "flex-end" : "flex-start",
           }}
         >
+          {msg.role === "assistant" &&
+            toolCalls
+              .get(msg.id)
+              ?.map((tc, i) => <ToolCallIndicator key={`${tc.toolName}-${i}`} toolCall={tc} />)}
           <Paper
             p="xs"
             radius="md"

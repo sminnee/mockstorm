@@ -14,7 +14,7 @@ export function useWorkspaceWs(slug: string): {
     const ws = new WebSocket(`${wsBase}/ws/${slug}`);
     wsRef.current = ws;
 
-    ws.onmessage = (event: MessageEvent<string>) => {
+    function handleMessage(event: MessageEvent<string>) {
       const msg = JSON.parse(event.data) as ServerMessage;
       if (msg.type === "init") {
         setWorkspace(msg.workspace);
@@ -28,9 +28,12 @@ export function useWorkspaceWs(slug: string): {
           };
         });
       }
-    };
+    }
+
+    ws.addEventListener("message", handleMessage);
 
     return () => {
+      ws.removeEventListener("message", handleMessage);
       ws.close();
     };
   }, [slug]);

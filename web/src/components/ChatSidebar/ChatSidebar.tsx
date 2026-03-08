@@ -9,7 +9,7 @@ interface ChatSidebarProps {
 }
 
 export function ChatSidebar({ wsRef }: ChatSidebarProps) {
-  const { messages, sendMessage, stop, isStreaming, error } = useChatWs(wsRef);
+  const { messages, toolCalls, sendMessage, stop, isStreaming, error } = useChatWs(wsRef);
 
   return (
     <Stack h="100%" gap={0}>
@@ -22,7 +22,7 @@ export function ChatSidebar({ wsRef }: ChatSidebarProps) {
       >
         Chat
       </Text>
-      <ChatMessageList messages={messages} />
+      <ChatMessageList messages={messages} toolCalls={toolCalls} />
       {error && (
         <Alert color="red" mx="sm" mb="xs" title="Error" radius="md">
           {error}

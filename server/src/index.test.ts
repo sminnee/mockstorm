@@ -5,7 +5,7 @@ import { WorkspaceStore } from "./workspace-store";
 let app: ReturnType<typeof createApp>;
 
 beforeEach(() => {
-  app = createApp(new WorkspaceStore());
+  app = createApp(new WorkspaceStore(), "./data");
 });
 
 describe("GET /", () => {

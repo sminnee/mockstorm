@@ -1,14 +1,16 @@
-import type { ChatMessage, ServerMessage } from "@mockstorm/shared";
+import type { ChatMessage, ServerMessage, ToolCallInfo } from "@mockstorm/shared";
 import { type RefObject, useCallback, useEffect, useRef, useState } from "react";
 
 export function useChatWs(wsRef: RefObject<WebSocket | null>): {
   messages: ChatMessage[];
+  toolCalls: Map<string, ToolCallInfo[]>;
   sendMessage: (content: string) => void;
   stop: () => void;
   isStreaming: boolean;
   error: string | null;
 } {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [toolCalls, setToolCalls] = useState<Map<string, ToolCallInfo[]>>(new Map());
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const streamContentRef = useRef("");
@@ -69,6 +71,22 @@ export function useChatWs(wsRef: RefObject<WebSocket | null>): {
           setIsStreaming(false);
           setError(msg.error);
           break;
+        case "chatToolCall":
+          setToolCalls((prev) => {
+            const next = new Map(prev);
+            const existing = next.get(msg.messageId) ?? [];
+            next.set(msg.messageId, [
+              ...existing,
+              {
+                messageId: msg.messageId,
+                toolName: msg.toolName,
+                args: msg.args,
+                result: msg.result,
+              },
+            ]);
+            return next;
+          });
+          break;
       }
     }
 
@@ -96,5 +114,5 @@ export function useChatWs(wsRef: RefObject<WebSocket | null>): {
     }
   }, [wsRef]);
 
-  return { messages, sendMessage, stop, isStreaming, error };
+  return { messages, toolCalls, sendMessage, stop, isStreaming, error };
 }
