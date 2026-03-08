@@ -123,7 +123,7 @@ export function ScreenView() {
           )}
           <ActionIcon
             variant={annotationMode ? "filled" : "subtle"}
-            color={annotationMode ? "red" : "gray"}
+            color={annotationMode ? "crimson" : "gray"}
             onClick={() => setAnnotationMode((v) => !v)}
             title={annotationMode ? "Exit annotation mode" : "Annotate screen"}
           >
@@ -139,7 +139,7 @@ export function ScreenView() {
               >
                 <IconEraser size={16} />
               </ActionIcon>
-              <Button size="compact-xs" color="red" onClick={handleSendAnnotations}>
+              <Button size="compact-xs" color="crimson" onClick={handleSendAnnotations}>
                 Send annotations
               </Button>
             </>

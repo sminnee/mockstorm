@@ -1,22 +1,21 @@
-import { type MantineColorsTuple, createTheme } from "@mantine/core";
+import { createTheme } from "@mantine/core";
+import { generatePalette } from "./lib/color-palette";
 
-const teal: MantineColorsTuple = [
-  "#e6fafa",
-  "#d0f2f2",
-  "#a1e5e4",
-  "#6fd7d6",
-  "#45cbca",
-  "#2cc4c3",
-  "#0ea5a0",
-  "#0d918d",
-  "#0b7d79",
-  "#096966",
-];
+const navy = generatePalette("#262e56");
+const azure = generatePalette("#1437e3");
+const emerald = generatePalette("#16944f");
+const amber = generatePalette("#e09500");
+const crimson = generatePalette("#c41e3a");
 
 export const theme = createTheme({
-  primaryColor: "teal",
+  primaryColor: "navy",
+  primaryShade: { light: 6, dark: 4 },
   colors: {
-    teal,
+    navy,
+    azure,
+    emerald,
+    amber,
+    crimson,
   },
   fontFamily: "Inter, system-ui, sans-serif",
   defaultRadius: "md",

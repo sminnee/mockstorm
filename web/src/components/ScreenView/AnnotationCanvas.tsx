@@ -46,7 +46,7 @@ export const AnnotationCanvas = forwardRef<AnnotationCanvasHandle, AnnotationCan
         const y = ((e.clientY - rect.top) / rect.height) * canvas.height;
         ctx.beginPath();
         ctx.moveTo(x, y);
-        ctx.strokeStyle = "rgba(255, 0, 0, 0.6)";
+        ctx.strokeStyle = "rgba(196, 30, 58, 0.6)";
         ctx.lineWidth = 5;
         ctx.lineCap = "round";
         ctx.lineJoin = "round";
