@@ -1,15 +1,12 @@
-import { Badge, Button, Container, Group, Title } from "@mantine/core";
+import { Route, Routes } from "react-router-dom";
+import { HomePage } from "./pages/HomePage";
+import { WorkspacePage } from "./pages/WorkspacePage";
 
 export function App() {
   return (
-    <Container>
-      <Group justify="space-between" mt="xl">
-        <Title order={1}>Mockstorm</Title>
-        <Badge color="teal" size="lg">
-          Preview
-        </Badge>
-      </Group>
-      <Button mt="md">Get started</Button>
-    </Container>
+    <Routes>
+      <Route path="/" element={<HomePage />} />
+      <Route path="/:slug" element={<WorkspacePage />} />
+    </Routes>
   );
 }
