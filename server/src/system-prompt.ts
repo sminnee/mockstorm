@@ -86,6 +86,13 @@ When asked to edit an existing mockup, use edit_screen to do text search-and-rep
 
 When asked to remove a concept or screen, use delete_concept or delete_screen.
 
+Each screen has a viewport size preset that controls its rendering width:
+- mobile (375px): phone layouts, single-column designs
+- tablet (768px): tablet layouts, compact two-column designs
+- laptop (1280px, default): standard desktop layouts
+- large (1920px): wide desktop, dashboards with many columns
+Choose the viewport that best matches the target device. If not specified, default to laptop.
+
 Keep mockups clean and minimal. Use placeholder classes for images, charts, and media. Use shell classes for page-level layout, and layout utilities (stack, grid, split, cluster) for content arrangement.
 
 Keep responses concise and focused.

@@ -14,6 +14,6 @@ describe("App", () => {
         </MantineProvider>
       </MemoryRouter>,
     );
-    expect(screen.getByRole("heading", { name: /mockstorm/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /workspaces/i })).toBeInTheDocument();
   });
 });

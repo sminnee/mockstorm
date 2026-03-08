@@ -1,6 +1,6 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import type { Concept, Screen } from "@mockstorm/shared";
+import type { Concept, Screen, ViewportPreset } from "@mockstorm/shared";
 
 export class ConceptStore {
   private concepts = new Map<string, Concept[]>();
@@ -112,7 +112,7 @@ export class ConceptStore {
     slug: string,
     conceptId: string,
     screenId: string,
-    fields: { title?: string; description?: string },
+    fields: { title?: string; description?: string; viewport?: ViewportPreset },
   ): Screen | undefined {
     const concepts = this.concepts.get(slug);
     if (!concepts) return undefined;
@@ -122,6 +122,7 @@ export class ConceptStore {
     if (!screen) return undefined;
     if (fields.title !== undefined) screen.title = fields.title;
     if (fields.description !== undefined) screen.description = fields.description;
+    if (fields.viewport !== undefined) screen.viewport = fields.viewport;
     void this.persist(slug);
     return screen;
   }

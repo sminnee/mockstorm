@@ -1,17 +1,23 @@
 import {
-  ActionIcon,
+  Avatar,
+  Box,
   Button,
   Card,
   Container,
   Group,
+  Image,
+  Modal,
+  Paper,
   SimpleGrid,
   Text,
   TextInput,
   Title,
 } from "@mantine/core";
-import { IconTrash } from "@tabler/icons-react";
+import { useDisclosure } from "@mantine/hooks";
+import { IconDiamond, IconPlus, IconTrash } from "@tabler/icons-react";
 import { useCallback, useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import { formatRelativeTime } from "../lib/format-time";
 import {
   forgetWorkspace,
   getRememberedSlugs,
@@ -22,12 +28,17 @@ interface WorkspaceInfo {
   slug: string;
   title: string;
   description: string;
+  conceptCount: number;
+  screenCount: number;
+  thumbnailUrl: string | null;
+  createdAt: string;
 }
 
 export function HomePage() {
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
   const [workspaces, setWorkspaces] = useState<WorkspaceInfo[]>([]);
+  const [modalOpened, { open: openModal, close: closeModal }] = useDisclosure(false);
   const navigate = useNavigate();
 
   const loadWorkspaces = useCallback(async () => {
@@ -53,8 +64,7 @@ export function HomePage() {
     void loadWorkspaces();
   }, [loadWorkspaces]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleCreate = async () => {
     if (!name.trim()) return;
     setLoading(true);
     try {
@@ -65,72 +75,133 @@ export function HomePage() {
       });
       const { slug } = (await res.json()) as { slug: string };
       rememberWorkspace(slug);
+      closeModal();
       void navigate(`/${slug}`);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleForget = (slug: string) => {
+  const handleForget = (e: React.MouseEvent, slug: string) => {
+    e.stopPropagation();
     if (!window.confirm("Are you sure you want to forget this workspace?")) return;
     forgetWorkspace(slug);
     setWorkspaces((prev) => prev.filter((w) => w.slug !== slug));
   };
 
   return (
-    <Container mt="xl">
-      <Title order={1} mb="lg">
-        Mockstorm
-      </Title>
-      <form onSubmit={(e) => void handleSubmit(e)}>
-        <TextInput
-          label="Workspace name"
-          placeholder="My workspace"
-          value={name}
-          onChange={(e) => setName(e.currentTarget.value)}
-          mb="md"
-        />
-        <Button type="submit" loading={loading} disabled={!name.trim()}>
-          Create workspace
-        </Button>
-      </form>
+    <Box bg="gray.0" mih="100vh">
+      <Paper shadow="xs" px="xl" py="sm">
+        <Group justify="space-between">
+          <Group gap="xs">
+            <IconDiamond size={24} />
+            <Text fw={700} size="lg">
+              Mockstorm
+            </Text>
+          </Group>
+          <Group gap="xs">
+            <Avatar size="sm" color="blue" />
+            <Text size="sm">User</Text>
+          </Group>
+        </Group>
+      </Paper>
 
-      {workspaces.length > 0 && (
-        <>
-          <Title order={3} mt="xl" mb="md">
-            Your workspaces
-          </Title>
-          <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }}>
-            {workspaces.map((w) => (
-              <Card key={w.slug} shadow="sm" padding="lg" radius="md" withBorder>
-                <Group justify="space-between" mb="xs">
-                  <Text
-                    fw={500}
-                    component={Link}
-                    to={`/${w.slug}`}
-                    style={{ textDecoration: "none", color: "inherit" }}
-                  >
-                    {w.title || w.slug}
-                  </Text>
-                  <ActionIcon
-                    variant="subtle"
-                    color="gray"
-                    onClick={() => handleForget(w.slug)}
-                    aria-label="Forget workspace"
-                  >
-                    <IconTrash size={16} />
-                  </ActionIcon>
-                </Group>
-                {w.description && (
-                  <Text size="sm" c="dimmed" lineClamp={2}>
-                    {w.description}
-                  </Text>
-                )}
-              </Card>
-            ))}
-          </SimpleGrid>
-        </>
-      )}
-    </Container>
+      <Container size="lg" py="xl">
+        <Group justify="space-between" mb="xl">
+          <Title order={1}>Workspaces</Title>
+          <Button color="dark" leftSection={<IconPlus size={16} />} onClick={openModal}>
+            New Workspace
+          </Button>
+        </Group>
+
+        <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }}>
+          {workspaces.map((w) => (
+            <Card
+              key={w.slug}
+              shadow="sm"
+              padding="lg"
+              radius="md"
+              withBorder
+              style={{ cursor: "pointer" }}
+              onClick={() => void navigate(`/${w.slug}`)}
+            >
+              {w.thumbnailUrl ? (
+                <Card.Section>
+                  <Image src={w.thumbnailUrl} height={120} alt={w.title} />
+                </Card.Section>
+              ) : (
+                <Card.Section>
+                  <Box bg="gray.2" h={120} />
+                </Card.Section>
+              )}
+              <Group justify="space-between" mt="md" mb={4}>
+                <Text fw={600} lineClamp={1}>
+                  {w.title || w.slug}
+                </Text>
+                <IconTrash
+                  size={16}
+                  style={{ cursor: "pointer", color: "var(--mantine-color-gray-5)", flexShrink: 0 }}
+                  onClick={(e: React.MouseEvent) => handleForget(e, w.slug)}
+                />
+              </Group>
+              <Text size="sm" c="dimmed">
+                {w.conceptCount} concepts · {w.screenCount} screens
+              </Text>
+              {w.createdAt && (
+                <Text size="xs" c="dimmed" mt={4}>
+                  {formatRelativeTime(w.createdAt)}
+                </Text>
+              )}
+            </Card>
+          ))}
+
+          <Card
+            shadow="none"
+            padding="lg"
+            radius="md"
+            withBorder
+            style={{
+              cursor: "pointer",
+              borderStyle: "dashed",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              minHeight: 200,
+            }}
+            onClick={openModal}
+          >
+            <Box ta="center">
+              <IconPlus size={32} color="var(--mantine-color-gray-5)" />
+              <Text c="dimmed" mt="xs">
+                New Workspace
+              </Text>
+            </Box>
+          </Card>
+        </SimpleGrid>
+      </Container>
+
+      <Modal opened={modalOpened} onClose={closeModal} title="Create Workspace" centered>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            void handleCreate();
+          }}
+        >
+          <TextInput
+            label="Workspace name"
+            placeholder="My workspace"
+            value={name}
+            onChange={(e) => setName(e.currentTarget.value)}
+            mb="md"
+            data-autofocus
+          />
+          <Group justify="flex-end">
+            <Button type="submit" loading={loading} disabled={!name.trim()}>
+              Create
+            </Button>
+          </Group>
+        </form>
+      </Modal>
+    </Box>
   );
 }

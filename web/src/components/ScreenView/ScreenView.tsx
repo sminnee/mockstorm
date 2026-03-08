@@ -1,5 +1,13 @@
-import { ActionIcon, Anchor, Button, Group, Text, Title } from "@mantine/core";
-import { IconArrowLeft, IconArrowRight, IconEraser, IconPencil } from "@tabler/icons-react";
+import { ActionIcon, Anchor, Badge, Button, Group, Text, Title } from "@mantine/core";
+import { VIEWPORT_WIDTHS } from "@mockstorm/shared";
+import {
+  IconArrowLeft,
+  IconArrowRight,
+  IconCode,
+  IconEraser,
+  IconPencil,
+  IconPhoto,
+} from "@tabler/icons-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useWorkspaceContext } from "../../contexts/WorkspaceContext";
@@ -94,6 +102,26 @@ export function ScreenView() {
         </Group>
         <Group gap="xs">
           <ActionIcon
+            component="a"
+            href={`/api/workspaces/${slug}/screens/${sid}/download.html`}
+            variant="subtle"
+            color="gray"
+            title="Download HTML"
+          >
+            <IconCode size={16} />
+          </ActionIcon>
+          {screen.thumbnailUrl && (
+            <ActionIcon
+              component="a"
+              href={`/api/workspaces/${slug}/screens/${sid}/thumbnail.png?download=true`}
+              variant="subtle"
+              color="gray"
+              title="Download image"
+            >
+              <IconPhoto size={16} />
+            </ActionIcon>
+          )}
+          <ActionIcon
             variant={annotationMode ? "filled" : "subtle"}
             color={annotationMode ? "red" : "gray"}
             onClick={() => setAnnotationMode((v) => !v)}
@@ -139,32 +167,41 @@ export function ScreenView() {
           </ActionIcon>
         </Group>
       </Group>
-      <Title order={4} mb="md">
-        {screen.title}
-      </Title>
-      <div style={{ position: "relative" }}>
-        <iframe
-          key={hashString(screen.html)}
-          src={`/api/workspaces/${slug}/screens/${sid}/html`}
-          sandbox="allow-same-origin"
-          title={screen.title}
-          style={{
-            width: "100%",
-            height: "calc(100vh - 300px)",
-            border: "1px solid var(--mantine-color-gray-3)",
-            borderRadius: 8,
-            background: "white",
-            display: "block",
-          }}
-        />
-        <AnnotationCanvas
-          ref={annotationRef}
-          width={1280}
-          height={900}
-          disabled={!annotationMode}
-          onAnnotationChange={setLocalHasAnnotations}
-        />
-      </div>
+      <Group mb="md" gap="xs" align="center">
+        <Title order={4}>{screen.title}</Title>
+        <Badge variant="light" size="sm">
+          {screen.viewport ?? "laptop"}
+        </Badge>
+      </Group>
+      {(() => {
+        const vp = screen.viewport ?? "laptop";
+        const vpWidth = VIEWPORT_WIDTHS[vp];
+        return (
+          <div style={{ maxWidth: vpWidth, margin: "0 auto", position: "relative" }}>
+            <iframe
+              key={hashString(screen.html)}
+              src={`/api/workspaces/${slug}/screens/${sid}/html`}
+              sandbox="allow-same-origin"
+              title={screen.title}
+              style={{
+                width: "100%",
+                height: "calc(100vh - 300px)",
+                border: "1px solid var(--mantine-color-gray-3)",
+                borderRadius: 8,
+                background: "white",
+                display: "block",
+              }}
+            />
+            <AnnotationCanvas
+              ref={annotationRef}
+              width={vpWidth}
+              height={Math.round(vpWidth * 0.75)}
+              disabled={!annotationMode}
+              onAnnotationChange={setLocalHasAnnotations}
+            />
+          </div>
+        );
+      })()}
     </>
   );
 }

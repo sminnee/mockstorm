@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import type Anthropic from "@anthropic-ai/sdk";
-import type { Concept, Screen, ServerMessage } from "@mockstorm/shared";
+import type { Concept, Screen, ServerMessage, ViewportPreset } from "@mockstorm/shared";
 import type { ConceptStore } from "./concept-store";
 import type { WorkspaceHub } from "./workspace-hub";
 
@@ -11,6 +11,7 @@ export interface RenderJob {
   conceptId: string;
   screenId: string;
   html: string;
+  viewport: ViewportPreset;
 }
 
 type ToolResult = Anthropic.Messages.ToolResultBlockParam["content"];
@@ -39,6 +40,7 @@ export async function handleToolCall(
           title: string;
           description: string;
           html: string;
+          viewport?: ViewportPreset;
         },
         slug,
         conceptStore,
@@ -77,10 +79,12 @@ export async function handleToolCall(
           screen_id: string;
           title?: string;
           description?: string;
+          viewport?: ViewportPreset;
         },
         slug,
         conceptStore,
         hub,
+        enqueueRender,
       );
     case "edit_screen":
       return handleEditScreen(
@@ -129,17 +133,20 @@ function handleAddScreen(
     title: string;
     description: string;
     html: string;
+    viewport?: ViewportPreset;
   },
   slug: string,
   conceptStore: ConceptStore,
   hub: WorkspaceHub,
   enqueueRender: (job: RenderJob) => void,
 ): { content: string; description: string; conceptId?: string; screenId?: string } {
+  const viewport = input.viewport ?? "laptop";
   const screen: Screen = {
     id: crypto.randomUUID(),
     title: input.title,
     description: input.description,
     html: input.html,
+    viewport,
     thumbnailUrl: null,
     createdAt: new Date().toISOString(),
   };
@@ -164,6 +171,7 @@ function handleAddScreen(
     conceptId: input.concept_id,
     screenId: screen.id,
     html: input.html,
+    viewport,
   });
 
   return {
@@ -290,14 +298,25 @@ function handleEditConcept(
 }
 
 function handleEditScreenMeta(
-  input: { concept_id: string; screen_id: string; title?: string; description?: string },
+  input: {
+    concept_id: string;
+    screen_id: string;
+    title?: string;
+    description?: string;
+    viewport?: ViewportPreset;
+  },
   slug: string,
   conceptStore: ConceptStore,
   hub: WorkspaceHub,
+  enqueueRender: (job: RenderJob) => void,
 ): { content: string; description: string; conceptId: string; screenId: string } {
-  const fields: { title?: string; description?: string } = {};
+  const oldScreen = conceptStore.getScreen(slug, input.concept_id, input.screen_id);
+  const oldViewport = oldScreen?.viewport ?? "laptop";
+
+  const fields: { title?: string; description?: string; viewport?: ViewportPreset } = {};
   if (input.title !== undefined) fields.title = input.title;
   if (input.description !== undefined) fields.description = input.description;
+  if (input.viewport !== undefined) fields.viewport = input.viewport;
   const screen = conceptStore.updateScreen(slug, input.concept_id, input.screen_id, fields);
   if (!screen) {
     return {
@@ -313,6 +332,19 @@ function handleEditScreenMeta(
     screen,
   };
   hub.broadcast(slug, msg);
+
+  // Re-render if viewport changed
+  const newViewport = screen.viewport ?? "laptop";
+  if (input.viewport !== undefined && newViewport !== oldViewport) {
+    enqueueRender({
+      slug,
+      conceptId: input.concept_id,
+      screenId: screen.id,
+      html: screen.html,
+      viewport: newViewport,
+    });
+  }
+
   return {
     content: `Updated screen ${input.screen_id}`,
     description: "Updated screen metadata",
@@ -354,6 +386,7 @@ function handleEditScreen(
     conceptId: input.concept_id,
     screenId: screen.id,
     html: screen.html,
+    viewport: screen.viewport ?? "laptop",
   });
   return {
     content: "Updated screen HTML and re-rendering thumbnail.",

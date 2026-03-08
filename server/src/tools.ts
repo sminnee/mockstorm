@@ -37,6 +37,12 @@ export const TOOLS: Anthropic.Messages.Tool[] = [
           description:
             "HTML fragment using wireframe utility classes. Wrap content in a div with class 'screen'.",
         },
+        viewport: {
+          type: "string",
+          enum: ["mobile", "tablet", "laptop", "large"],
+          description:
+            "Target viewport size for the screen. Defaults to 'laptop'. Use 'mobile' (375px), 'tablet' (768px), 'laptop' (1280px), or 'large' (1920px).",
+        },
       },
       required: ["concept_id", "title", "description", "html"],
     },
@@ -144,6 +150,12 @@ export const TOOLS: Anthropic.Messages.Tool[] = [
         description: {
           type: "string",
           description: "New description for the screen",
+        },
+        viewport: {
+          type: "string",
+          enum: ["mobile", "tablet", "laptop", "large"],
+          description:
+            "New viewport size for the screen: 'mobile' (375px), 'tablet' (768px), 'laptop' (1280px), or 'large' (1920px).",
         },
       },
       required: ["concept_id", "screen_id"],

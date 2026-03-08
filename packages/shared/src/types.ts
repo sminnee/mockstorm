@@ -1,3 +1,12 @@
+export type ViewportPreset = "mobile" | "tablet" | "laptop" | "large";
+
+export const VIEWPORT_WIDTHS: Record<ViewportPreset, number> = {
+  mobile: 375,
+  tablet: 768,
+  laptop: 1280,
+  large: 1920,
+};
+
 export interface Workspace {
   slug: string;
   name: string;
@@ -11,6 +20,7 @@ export interface Screen {
   title: string;
   description: string;
   html: string;
+  viewport?: ViewportPreset;
   thumbnailUrl: string | null;
   createdAt: string;
 }
