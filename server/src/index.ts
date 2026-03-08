@@ -1,6 +1,7 @@
 import { fileURLToPath } from "node:url";
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
+import { ChatStore } from "./chat-store";
 import { WorkspaceStore } from "./workspace-store";
 import { attachWsServer } from "./ws-server";
 
@@ -29,7 +30,9 @@ export function createApp(store: WorkspaceStore) {
 
 if (fileURLToPath(import.meta.url) === process.argv[1]) {
   const store = new WorkspaceStore();
+  const chatStore = new ChatStore();
   await store.load("./data");
+  await chatStore.load("./data");
 
   const app = createApp(store);
 
@@ -40,5 +43,5 @@ if (fileURLToPath(import.meta.url) === process.argv[1]) {
     },
   );
 
-  attachWsServer(httpServer, store);
+  attachWsServer(httpServer, store, chatStore);
 }
