@@ -1,4 +1,4 @@
-import type { Concept, Workspace } from "@mockstorm/shared";
+import type { ChatMessage, Concept, ToolCallInfo, Workspace } from "@mockstorm/shared";
 import { type RefObject, createContext, useContext } from "react";
 
 interface WorkspaceContextValue {
@@ -12,6 +12,15 @@ interface WorkspaceContextValue {
   setGetAnnotationImage: (fn: (() => Promise<string>) | null) => void;
   hasAnnotations: boolean;
   setHasAnnotations: (v: boolean) => void;
+  messages: ChatMessage[];
+  toolCalls: Map<string, ToolCallInfo[]>;
+  sendMessage: (
+    content: string,
+    context?: { conceptId?: string; screenId?: string; imageBase64?: string },
+  ) => void;
+  stop: () => void;
+  isStreaming: boolean;
+  chatError: string | null;
 }
 
 const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
