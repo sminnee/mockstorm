@@ -1,5 +1,6 @@
 import { Alert, Stack, Text } from "@mantine/core";
-import type { RefObject } from "react";
+import { type RefObject, useCallback } from "react";
+import { useParams } from "react-router-dom";
 import { useChatWs } from "../../hooks/useChatWs";
 import { ChatInput } from "./ChatInput";
 import { ChatMessageList } from "./ChatMessageList";
@@ -10,6 +11,17 @@ interface ChatSidebarProps {
 
 export function ChatSidebar({ wsRef }: ChatSidebarProps) {
   const { messages, toolCalls, sendMessage, stop, isStreaming, error } = useChatWs(wsRef);
+  const { cid, sid } = useParams<{ cid?: string; sid?: string }>();
+
+  const sendWithContext = useCallback(
+    (content: string) => {
+      sendMessage(content, {
+        ...(cid ? { conceptId: cid } : {}),
+        ...(sid ? { screenId: sid } : {}),
+      });
+    },
+    [sendMessage, cid, sid],
+  );
 
   return (
     <Stack h="100%" gap={0}>
@@ -28,7 +40,7 @@ export function ChatSidebar({ wsRef }: ChatSidebarProps) {
           {error}
         </Alert>
       )}
-      <ChatInput onSend={sendMessage} onStop={stop} isStreaming={isStreaming} />
+      <ChatInput onSend={sendWithContext} onStop={stop} isStreaming={isStreaming} />
     </Stack>
   );
 }

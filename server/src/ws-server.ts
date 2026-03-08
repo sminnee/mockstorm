@@ -104,6 +104,8 @@ export function attachWsServer(
           renderer,
           activeStreams,
           dataDir,
+          msg.conceptId,
+          msg.screenId,
         );
       } else if (msg.type === "chatStop") {
         console.log(`[ws] chatStop – slug=${slug}`);
@@ -132,18 +134,41 @@ async function handleChatSend(
   renderer: Renderer,
   activeStreams: Map<string, AbortController>,
   dataDir: string,
+  conceptId?: string,
+  screenId?: string,
 ): Promise<void> {
   const userMessage = {
     id: crypto.randomUUID(),
     role: "user" as const,
     content,
     createdAt: new Date().toISOString(),
+    ...(conceptId ? { conceptId } : {}),
+    ...(screenId ? { screenId } : {}),
   };
   chatStore.addMessage(slug, userMessage);
   hub.broadcast(slug, { type: "chatUserMessage", message: userMessage });
 
+  // Build context-aware API message content
+  const apiContent: Array<{ type: "text"; text: string }> = [];
+
+  if (conceptId) {
+    const concepts = conceptStore.getConcepts(slug);
+    const concept = concepts.find((c) => c.id === conceptId);
+    if (concept) {
+      const screen = screenId ? concept.screens.find((s) => s.id === screenId) : undefined;
+      let contextText = `[User is viewing concept "${concept.title}" (id: ${concept.id})`;
+      if (screen) {
+        contextText += `, screen "${screen.title}" (id: ${screen.id})`;
+      }
+      contextText += "]";
+      apiContent.push({ type: "text", text: contextText });
+    }
+  }
+
+  apiContent.push({ type: "text", text: content });
+
   // Add user message to raw history
-  chatStore.addRawMessages(slug, [{ role: "user", content }]);
+  chatStore.addRawMessages(slug, [{ role: "user", content: apiContent }]);
 
   const messageId = crypto.randomUUID();
   const controller = new AbortController();

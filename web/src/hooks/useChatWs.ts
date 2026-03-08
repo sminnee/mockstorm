@@ -4,7 +4,7 @@ import { type RefObject, useCallback, useEffect, useRef, useState } from "react"
 export function useChatWs(wsRef: RefObject<WebSocket | null>): {
   messages: ChatMessage[];
   toolCalls: Map<string, ToolCallInfo[]>;
-  sendMessage: (content: string) => void;
+  sendMessage: (content: string, context?: { conceptId?: string; screenId?: string }) => void;
   stop: () => void;
   isStreaming: boolean;
   error: string | null;
@@ -99,11 +99,18 @@ export function useChatWs(wsRef: RefObject<WebSocket | null>): {
   }, [wsRef]);
 
   const sendMessage = useCallback(
-    (content: string) => {
+    (content: string, context?: { conceptId?: string; screenId?: string }) => {
       const ws = wsRef.current;
       if (ws?.readyState === WebSocket.OPEN) {
         setError(null);
-        ws.send(JSON.stringify({ type: "chatSend", content }));
+        ws.send(
+          JSON.stringify({
+            type: "chatSend",
+            content,
+            ...(context?.conceptId ? { conceptId: context.conceptId } : {}),
+            ...(context?.screenId ? { screenId: context.screenId } : {}),
+          }),
+        );
       }
     },
     [wsRef],
