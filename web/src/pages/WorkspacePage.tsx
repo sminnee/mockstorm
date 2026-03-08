@@ -1,12 +1,13 @@
-import { Container, TextInput, Textarea, Title } from "@mantine/core";
+import { AppShell, Container, TextInput, Textarea, Title } from "@mantine/core";
 import { useDebouncedCallback } from "@mantine/hooks";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+import { ChatSidebar } from "../components/ChatSidebar";
 import { useWorkspaceWs } from "../hooks/useWorkspaceWs";
 
 export function WorkspacePage() {
   const { slug } = useParams<{ slug: string }>();
-  const { workspace, updateWorkspace } = useWorkspaceWs(slug ?? "");
+  const { workspace, updateWorkspace, wsRef } = useWorkspaceWs(slug ?? "");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
 
@@ -34,27 +35,32 @@ export function WorkspacePage() {
   }
 
   return (
-    <Container mt="xl">
-      <TextInput
-        size="xl"
-        value={title}
-        onChange={(e) => {
-          setTitle(e.currentTarget.value);
-          handleTitleChange(e.currentTarget.value);
-        }}
-        mb="md"
-        styles={{ input: { fontWeight: 700, fontSize: "1.5rem" } }}
-      />
-      <Textarea
-        placeholder="Add a description…"
-        value={description}
-        onChange={(e) => {
-          setDescription(e.currentTarget.value);
-          handleDescriptionChange(e.currentTarget.value);
-        }}
-        minRows={4}
-        autosize
-      />
-    </Container>
+    <AppShell navbar={{ width: 350, breakpoint: "sm" }} padding="md">
+      <AppShell.Navbar>
+        <ChatSidebar wsRef={wsRef} />
+      </AppShell.Navbar>
+      <AppShell.Main>
+        <TextInput
+          size="xl"
+          value={title}
+          onChange={(e) => {
+            setTitle(e.currentTarget.value);
+            handleTitleChange(e.currentTarget.value);
+          }}
+          mb="md"
+          styles={{ input: { fontWeight: 700, fontSize: "1.5rem" } }}
+        />
+        <Textarea
+          placeholder="Add a description…"
+          value={description}
+          onChange={(e) => {
+            setDescription(e.currentTarget.value);
+            handleDescriptionChange(e.currentTarget.value);
+          }}
+          minRows={4}
+          autosize
+        />
+      </AppShell.Main>
+    </AppShell>
   );
 }

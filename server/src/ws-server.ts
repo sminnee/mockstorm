@@ -1,7 +1,11 @@
+import crypto from "node:crypto";
 import type http from "node:http";
 import type { Duplex } from "node:stream";
+import Anthropic from "@anthropic-ai/sdk";
 import type { ClientMessage, ServerMessage } from "@mockstorm/shared";
 import { type WebSocket, WebSocketServer } from "ws";
+import type { ChatStore } from "./chat-store";
+import { SYSTEM_PROMPT } from "./system-prompt";
 import { WorkspaceHub } from "./workspace-hub";
 import type { WorkspaceStore } from "./workspace-store";
 
@@ -12,9 +16,16 @@ interface UpgradeEmitter {
   ): void;
 }
 
-export function attachWsServer(httpServer: UpgradeEmitter, store: WorkspaceStore): void {
+const anthropic = new Anthropic();
+
+export function attachWsServer(
+  httpServer: UpgradeEmitter,
+  store: WorkspaceStore,
+  chatStore: ChatStore,
+): void {
   const wss = new WebSocketServer({ noServer: true });
   const hub = new WorkspaceHub();
+  const activeStreams = new Map<string, AbortController>();
 
   httpServer.on("upgrade", (req, socket, head) => {
     const url = req.url ?? "";
@@ -41,6 +52,12 @@ export function attachWsServer(httpServer: UpgradeEmitter, store: WorkspaceStore
     const initMsg: ServerMessage = { type: "init", workspace };
     ws.send(JSON.stringify(initMsg));
 
+    const historyMsg: ServerMessage = {
+      type: "chatHistory",
+      messages: chatStore.getMessages(slug),
+    };
+    ws.send(JSON.stringify(historyMsg));
+
     ws.on("message", (data) => {
       let msg: ClientMessage;
       try {
@@ -49,18 +66,119 @@ export function attachWsServer(httpServer: UpgradeEmitter, store: WorkspaceStore
         return;
       }
 
-      const fields: Partial<{ title: string; description: string }> = {};
-      if (msg.title !== undefined) fields.title = msg.title;
-      if (msg.description !== undefined) fields.description = msg.description;
+      if (msg.type === "workspaceUpdate") {
+        const fields: Partial<{ title: string; description: string }> = {};
+        if (msg.title !== undefined) fields.title = msg.title;
+        if (msg.description !== undefined) fields.description = msg.description;
 
-      store.update(slug, fields);
+        store.update(slug, fields);
 
-      const updateMsg: ServerMessage = { type: "workspaceUpdated", ...fields };
-      hub.broadcast(slug, updateMsg, ws);
+        const updateMsg: ServerMessage = { type: "workspaceUpdated", ...fields };
+        hub.broadcast(slug, updateMsg, ws);
+      } else if (msg.type === "chatSend") {
+        void handleChatSend(slug, msg.content, hub, chatStore, activeStreams);
+      } else if (msg.type === "chatStop") {
+        const controller = activeStreams.get(slug);
+        if (controller) {
+          controller.abort();
+        }
+      }
     });
 
     ws.on("close", () => {
       hub.unsubscribe(slug, ws);
     });
   });
+}
+
+async function handleChatSend(
+  slug: string,
+  content: string,
+  hub: WorkspaceHub,
+  chatStore: ChatStore,
+  activeStreams: Map<string, AbortController>,
+): Promise<void> {
+  const userMessage = {
+    id: crypto.randomUUID(),
+    role: "user" as const,
+    content,
+    createdAt: new Date().toISOString(),
+  };
+  chatStore.addMessage(slug, userMessage);
+  hub.broadcast(slug, { type: "chatUserMessage", message: userMessage });
+
+  const messageId = crypto.randomUUID();
+  const controller = new AbortController();
+  activeStreams.set(slug, controller);
+
+  hub.broadcast(slug, { type: "chatStreamStart", messageId });
+
+  let fullContent = "";
+
+  try {
+    const history = chatStore.getMessages(slug);
+    const apiMessages = history.map((m, i) => ({
+      role: m.role,
+      content:
+        i === history.length - 2
+          ? [
+              {
+                type: "text" as const,
+                text: m.content,
+                cache_control: { type: "ephemeral" as const },
+              },
+            ]
+          : m.content,
+    }));
+
+    const stream = anthropic.messages.stream(
+      {
+        model: "claude-sonnet-4-6-20250514",
+        max_tokens: 4096,
+        system: [{ type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
+        messages: apiMessages,
+      },
+      { signal: controller.signal },
+    );
+
+    for await (const event of stream) {
+      if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
+        fullContent += event.delta.text;
+        hub.broadcast(slug, {
+          type: "chatStreamChunk",
+          messageId,
+          delta: event.delta.text,
+        });
+      }
+    }
+
+    hub.broadcast(slug, { type: "chatStreamEnd", messageId, content: fullContent });
+
+    const assistantMessage = {
+      id: messageId,
+      role: "assistant" as const,
+      content: fullContent,
+      createdAt: new Date().toISOString(),
+    };
+    chatStore.addMessage(slug, assistantMessage);
+  } catch (error: unknown) {
+    if (error instanceof Error && error.name === "AbortError") {
+      hub.broadcast(slug, { type: "chatStreamEnd", messageId, content: fullContent });
+
+      if (fullContent) {
+        const assistantMessage = {
+          id: messageId,
+          role: "assistant" as const,
+          content: fullContent,
+          createdAt: new Date().toISOString(),
+        };
+        chatStore.addMessage(slug, assistantMessage);
+      }
+    } else {
+      const errorMsg = error instanceof Error ? error.message : "Unknown error";
+      hub.broadcast(slug, { type: "chatError", error: errorMsg });
+    }
+  } finally {
+    activeStreams.delete(slug);
+  }
 }

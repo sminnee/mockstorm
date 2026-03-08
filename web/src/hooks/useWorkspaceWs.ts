@@ -1,9 +1,10 @@
 import type { ServerMessage, Workspace } from "@mockstorm/shared";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { type RefObject, useCallback, useEffect, useRef, useState } from "react";
 
 export function useWorkspaceWs(slug: string): {
   workspace: Workspace | null;
   updateWorkspace: (fields: Partial<Pick<Workspace, "title" | "description">>) => void;
+  wsRef: RefObject<WebSocket | null>;
 } {
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
@@ -38,11 +39,11 @@ export function useWorkspaceWs(slug: string): {
     (fields: Partial<Pick<Workspace, "title" | "description">>) => {
       const ws = wsRef.current;
       if (ws?.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify(fields));
+        ws.send(JSON.stringify({ type: "workspaceUpdate", ...fields }));
       }
     },
     [],
   );
 
-  return { workspace, updateWorkspace };
+  return { workspace, updateWorkspace, wsRef };
 }
