@@ -16,12 +16,12 @@ function makeHub() {
 }
 
 describe("handleToolCall", () => {
-  it("add_concept creates a concept and broadcasts", () => {
+  it("add_concept creates a concept and broadcasts", async () => {
     const store = new ConceptStore();
     const hub = makeHub();
     const enqueue = vi.fn();
 
-    const result = handleToolCall(
+    const result = await handleToolCall(
       "add_concept",
       { title: "Login Page", description: "A login form" },
       "test-slug",
@@ -37,14 +37,14 @@ describe("handleToolCall", () => {
     expect(hub.messages[0]?.type).toBe("conceptAdded");
   });
 
-  it("add_screen creates a screen and enqueues render", () => {
+  it("add_screen creates a screen and enqueues render", async () => {
     const store = new ConceptStore();
     const hub = makeHub();
     const jobs: RenderJob[] = [];
     const enqueue = (job: RenderJob) => jobs.push(job);
 
     // First create a concept
-    handleToolCall(
+    await handleToolCall(
       "add_concept",
       { title: "Test", description: "Test" },
       "test-slug",
@@ -56,7 +56,7 @@ describe("handleToolCall", () => {
 
     const conceptId = store.getConcepts("test-slug")[0]?.id;
 
-    const result = handleToolCall(
+    const result = await handleToolCall(
       "add_screen",
       {
         concept_id: conceptId,
@@ -77,11 +77,11 @@ describe("handleToolCall", () => {
     expect(jobs[0]?.html).toBe("<h1>Home</h1>");
   });
 
-  it("add_screen returns error for missing concept", () => {
+  it("add_screen returns error for missing concept", async () => {
     const store = new ConceptStore();
     const hub = makeHub();
 
-    const result = handleToolCall(
+    const result = await handleToolCall(
       "add_screen",
       {
         concept_id: "nonexistent",
@@ -99,12 +99,12 @@ describe("handleToolCall", () => {
     expect(result.content).toContain("not found");
   });
 
-  it("list_concepts returns markdown summary", () => {
+  it("list_concepts returns markdown summary", async () => {
     const store = new ConceptStore();
     const hub = makeHub();
     const enqueue = vi.fn();
 
-    handleToolCall(
+    await handleToolCall(
       "add_concept",
       { title: "Concept A", description: "First" },
       "test-slug",
@@ -114,7 +114,7 @@ describe("handleToolCall", () => {
       "./data",
     );
 
-    const result = handleToolCall(
+    const result = await handleToolCall(
       "list_concepts",
       {},
       "test-slug",
@@ -127,11 +127,11 @@ describe("handleToolCall", () => {
     expect(result.content).toContain("Concept A");
   });
 
-  it("list_concepts returns empty message when none exist", () => {
+  it("list_concepts returns empty message when none exist", async () => {
     const store = new ConceptStore();
     const hub = makeHub();
 
-    const result = handleToolCall(
+    const result = await handleToolCall(
       "list_concepts",
       {},
       "test-slug",

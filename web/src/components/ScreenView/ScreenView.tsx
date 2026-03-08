@@ -3,6 +3,15 @@ import { IconArrowLeft, IconArrowRight } from "@tabler/icons-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useWorkspaceContext } from "../../contexts/WorkspaceContext";
 
+/** djb2 string hash — returns a short numeric string for use as a React key */
+function hashString(s: string): string {
+  let hash = 5381;
+  for (let i = 0; i < s.length; i++) {
+    hash = (hash * 33) ^ s.charCodeAt(i);
+  }
+  return (hash >>> 0).toString(36);
+}
+
 export function ScreenView() {
   const { slug, cid, sid } = useParams<{ slug: string; cid: string; sid: string }>();
   const { concepts } = useWorkspaceContext();
@@ -55,6 +64,7 @@ export function ScreenView() {
         {screen.title}
       </Title>
       <iframe
+        key={hashString(screen.html)}
         src={`/api/workspaces/${slug}/screens/${sid}/html`}
         sandbox="allow-same-origin"
         title={screen.title}
