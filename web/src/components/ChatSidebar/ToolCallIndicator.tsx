@@ -40,6 +40,7 @@ function getToolLink(toolCall: ToolCallInfo, slug: string): string | null {
     case "add_screen":
     case "edit_screen":
     case "edit_screen_meta":
+    case "render_screen":
       return screenId ? `/${slug}/concepts/${conceptId}/screens/${screenId}` : null;
     case "delete_screen":
       return `/${slug}/concepts/${conceptId}`;
