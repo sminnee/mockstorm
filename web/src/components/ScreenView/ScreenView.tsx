@@ -182,6 +182,7 @@ export function ScreenView() {
               key={hashString(screen.html)}
               src={`/api/workspaces/${slug}/screens/${sid}/html`}
               sandbox="allow-same-origin"
+              scrolling={hasAnnotations ? "no" : "yes"}
               title={screen.title}
               style={{
                 width: "100%",
