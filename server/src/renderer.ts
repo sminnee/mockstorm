@@ -1,5 +1,6 @@
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
+import { VIEWPORT_WIDTHS } from "@mockstorm/shared";
 import type { RenderJob } from "./tool-handler";
 import { wireframeCss } from "./wireframe-css";
 
@@ -89,7 +90,8 @@ export class Renderer {
         const browser = await this.ensureBrowser();
         const page = await browser.newPage();
 
-        await page.setViewportSize({ width: 800, height: 600 });
+        const vpWidth = VIEWPORT_WIDTHS[job.viewport];
+        await page.setViewportSize({ width: vpWidth, height: Math.round(vpWidth * 0.75) });
         await page.setContent(wrapHtml(job.html), {
           waitUntil: "networkidle",
         });

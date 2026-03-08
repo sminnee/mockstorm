@@ -1,4 +1,4 @@
-import { Card, Image, Loader, Text } from "@mantine/core";
+import { Badge, Card, Image, Loader, Text } from "@mantine/core";
 import type { Screen } from "@mockstorm/shared";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -39,6 +39,9 @@ export function ScreenCard({ screen }: ScreenCardProps) {
       <Text fw={500} mt="md" lineClamp={1}>
         {screen.title}
       </Text>
+      <Badge variant="light" size="xs" mt={4}>
+        {screen.viewport ?? "laptop"}
+      </Badge>
       <Text size="sm" c="dimmed" lineClamp={2}>
         {screen.description}
       </Text>

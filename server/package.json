@@ -13,11 +13,13 @@
     "@anthropic-ai/sdk": "^0.78.0",
     "@hono/node-server": "^1.13.7",
     "@mockstorm/shared": "workspace:*",
+    "archiver": "^7.0.1",
     "hono": "^4.7.4",
     "playwright": "^1.58.2",
     "ws": "^8"
   },
   "devDependencies": {
+    "@types/archiver": "^7.0.0",
     "@types/node": "^22.13.0",
     "@types/ws": "^8",
     "tsx": "^4.19.3",

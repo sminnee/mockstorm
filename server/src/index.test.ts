@@ -1,11 +1,12 @@
 import { beforeEach, describe, expect, it } from "vitest";
+import { ConceptStore } from "./concept-store";
 import { createApp } from "./index";
 import { WorkspaceStore } from "./workspace-store";
 
 let app: ReturnType<typeof createApp>;
 
 beforeEach(() => {
-  app = createApp(new WorkspaceStore(), "./data");
+  app = createApp(new WorkspaceStore(), "./data", new ConceptStore());
 });
 
 describe("GET /", () => {

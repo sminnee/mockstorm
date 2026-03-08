@@ -1,17 +1,21 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
+import { Readable } from "node:stream";
 import { fileURLToPath } from "node:url";
 import { serve } from "@hono/node-server";
+import type { Concept } from "@mockstorm/shared";
 import { Hono } from "hono";
+import { stream } from "hono/streaming";
 import { ChatStore } from "./chat-store";
 import { ConceptStore } from "./concept-store";
+import { slugify, streamConceptZip, wrapHtmlWithInlineCss } from "./download";
 import { Renderer } from "./renderer";
 import { wireframeCss } from "./wireframe-css";
 import type { WorkspaceHub } from "./workspace-hub";
 import { WorkspaceStore } from "./workspace-store";
 import { attachWsServer } from "./ws-server";
 
-export function createApp(store: WorkspaceStore, dataDir: string) {
+export function createApp(store: WorkspaceStore, dataDir: string, conceptStore?: ConceptStore) {
   const app = new Hono();
 
   app.get("/", (c) => {
@@ -28,7 +32,29 @@ export function createApp(store: WorkspaceStore, dataDir: string) {
     const body = await c.req.json<{ slugs: string[] }>();
     const workspaces = store.getMany(body.slugs);
     return c.json(
-      workspaces.map((w) => ({ slug: w.slug, title: w.title, description: w.description })),
+      workspaces.map((w) => {
+        const concepts = conceptStore?.getConcepts(w.slug) ?? [];
+        const screenCount = concepts.reduce((sum, co) => sum + co.screens.length, 0);
+        let thumbnailUrl: string | null = null;
+        for (const co of concepts) {
+          for (const s of co.screens) {
+            if (s.thumbnailUrl) {
+              thumbnailUrl = `/api/workspaces/${w.slug}/screens/${s.id}/thumbnail.png`;
+              break;
+            }
+          }
+          if (thumbnailUrl) break;
+        }
+        return {
+          slug: w.slug,
+          title: w.title,
+          description: w.description,
+          conceptCount: concepts.length,
+          screenCount,
+          thumbnailUrl,
+          createdAt: w.createdAt,
+        };
+      }),
     );
   });
 
@@ -37,18 +63,6 @@ export function createApp(store: WorkspaceStore, dataDir: string) {
     const workspace = store.get(slug);
     if (!workspace) return c.json({ error: "Not found" }, 404);
     return c.json(workspace);
-  });
-
-  app.get("/api/workspaces/:slug/screens/:screenId/thumbnail.png", async (c) => {
-    const slug = c.req.param("slug");
-    const screenId = c.req.param("screenId");
-    const thumbnailPath = join(dataDir, "workspaces", slug, "thumbnails", `${screenId}.png`);
-    try {
-      const data = await readFile(thumbnailPath);
-      return c.body(data, 200, { "Content-Type": "image/png" });
-    } catch {
-      return c.json({ error: "Thumbnail not found" }, 404);
-    }
   });
 
   app.get("/api/wireframe.css", (c) => {
@@ -86,6 +100,72 @@ ${screen.html}
     }
   });
 
+  // Download: concept ZIP bundle
+  app.get("/api/workspaces/:slug/concepts/:conceptId/download.zip", async (c) => {
+    const slug = c.req.param("slug");
+    const conceptId = c.req.param("conceptId");
+    const conceptsPath = join(dataDir, "workspaces", slug, "concepts.json");
+    try {
+      const content = await readFile(conceptsPath, "utf-8");
+      const concepts = JSON.parse(content) as Concept[];
+      const concept = concepts.find((co) => co.id === conceptId);
+      if (!concept) return c.json({ error: "Concept not found" }, 404);
+
+      const zipStream = await streamConceptZip(concept, slug, dataDir, wireframeCss);
+      const filename = `${slugify(concept.title) || concept.id}.zip`;
+      c.header("Content-Type", "application/zip");
+      c.header("Content-Disposition", `attachment; filename="${filename}"`);
+      return stream(c, async (s) => {
+        const readable = Readable.from(zipStream);
+        for await (const chunk of readable) {
+          await s.write(chunk as Uint8Array);
+        }
+      });
+    } catch {
+      return c.json({ error: "Not found" }, 404);
+    }
+  });
+
+  // Download: single screen HTML with inlined CSS
+  app.get("/api/workspaces/:slug/screens/:screenId/download.html", async (c) => {
+    const slug = c.req.param("slug");
+    const screenId = c.req.param("screenId");
+    const conceptsPath = join(dataDir, "workspaces", slug, "concepts.json");
+    try {
+      const content = await readFile(conceptsPath, "utf-8");
+      const concepts = JSON.parse(content) as Concept[];
+      for (const concept of concepts) {
+        const screen = concept.screens.find((s) => s.id === screenId);
+        if (screen) {
+          const filename = `${slugify(screen.title) || screen.id}.html`;
+          const html = wrapHtmlWithInlineCss(screen.html, wireframeCss);
+          c.header("Content-Disposition", `attachment; filename="${filename}"`);
+          return c.html(html);
+        }
+      }
+      return c.json({ error: "Screen not found" }, 404);
+    } catch {
+      return c.json({ error: "Not found" }, 404);
+    }
+  });
+
+  // Download: screen thumbnail with Content-Disposition when ?download=true
+  app.get("/api/workspaces/:slug/screens/:screenId/thumbnail.png", async (c) => {
+    const slug = c.req.param("slug");
+    const screenId = c.req.param("screenId");
+    const thumbnailPath = join(dataDir, "workspaces", slug, "thumbnails", `${screenId}.png`);
+    try {
+      const data = await readFile(thumbnailPath);
+      const headers: Record<string, string> = { "Content-Type": "image/png" };
+      if (c.req.query("download") === "true") {
+        headers["Content-Disposition"] = `attachment; filename="${screenId}.png"`;
+      }
+      return c.body(data, 200, headers);
+    } catch {
+      return c.json({ error: "Thumbnail not found" }, 404);
+    }
+  });
+
   return app;
 }
 
@@ -111,7 +191,7 @@ if (fileURLToPath(import.meta.url) === process.argv[1]) {
     });
   });
 
-  const app = createApp(store, dataDir);
+  const app = createApp(store, dataDir, conceptStore);
 
   const httpServer = serve(
     {
