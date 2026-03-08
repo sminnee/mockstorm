@@ -6,9 +6,11 @@ export function useChatWs(wsRef: RefObject<WebSocket | null>): {
   sendMessage: (content: string) => void;
   stop: () => void;
   isStreaming: boolean;
+  error: string | null;
 } {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const streamContentRef = useRef("");
 
   useEffect(() => {
@@ -63,6 +65,10 @@ export function useChatWs(wsRef: RefObject<WebSocket | null>): {
             return updated;
           });
           break;
+        case "chatError":
+          setIsStreaming(false);
+          setError(msg.error);
+          break;
       }
     }
 
@@ -76,6 +82,7 @@ export function useChatWs(wsRef: RefObject<WebSocket | null>): {
     (content: string) => {
       const ws = wsRef.current;
       if (ws?.readyState === WebSocket.OPEN) {
+        setError(null);
         ws.send(JSON.stringify({ type: "chatSend", content }));
       }
     },
@@ -89,5 +96,5 @@ export function useChatWs(wsRef: RefObject<WebSocket | null>): {
     }
   }, [wsRef]);
 
-  return { messages, sendMessage, stop, isStreaming };
+  return { messages, sendMessage, stop, isStreaming, error };
 }

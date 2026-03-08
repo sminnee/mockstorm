@@ -47,6 +47,7 @@ export function attachWsServer(
       return;
     }
 
+    console.log(`[ws] connection – slug=${slug}`);
     hub.subscribe(slug, ws);
 
     const initMsg: ServerMessage = { type: "init", workspace };
@@ -71,13 +72,16 @@ export function attachWsServer(
         if (msg.title !== undefined) fields.title = msg.title;
         if (msg.description !== undefined) fields.description = msg.description;
 
+        console.log(`[ws] workspaceUpdate – slug=${slug} fields=${Object.keys(fields).join(",")}`);
         store.update(slug, fields);
 
         const updateMsg: ServerMessage = { type: "workspaceUpdated", ...fields };
         hub.broadcast(slug, updateMsg, ws);
       } else if (msg.type === "chatSend") {
+        console.log(`[ws] chatSend – slug=${slug} contentLength=${msg.content.length}`);
         void handleChatSend(slug, msg.content, hub, chatStore, activeStreams);
       } else if (msg.type === "chatStop") {
+        console.log(`[ws] chatStop – slug=${slug}`);
         const controller = activeStreams.get(slug);
         if (controller) {
           controller.abort();
@@ -86,6 +90,7 @@ export function attachWsServer(
     });
 
     ws.on("close", () => {
+      console.log(`[ws] closed – slug=${slug}`);
       hub.unsubscribe(slug, ws);
     });
   });
@@ -111,6 +116,7 @@ async function handleChatSend(
   const controller = new AbortController();
   activeStreams.set(slug, controller);
 
+  console.log(`[ws] chatStreamStart – slug=${slug} messageId=${messageId}`);
   hub.broadcast(slug, { type: "chatStreamStart", messageId });
 
   let fullContent = "";
@@ -133,7 +139,7 @@ async function handleChatSend(
 
     const stream = anthropic.messages.stream(
       {
-        model: "claude-sonnet-4-6-20250514",
+        model: "claude-sonnet-4-6",
         max_tokens: 4096,
         system: [{ type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
         messages: apiMessages,
@@ -152,6 +158,9 @@ async function handleChatSend(
       }
     }
 
+    console.log(
+      `[ws] chatStreamEnd – slug=${slug} messageId=${messageId} length=${fullContent.length} aborted=false`,
+    );
     hub.broadcast(slug, { type: "chatStreamEnd", messageId, content: fullContent });
 
     const assistantMessage = {
@@ -163,6 +172,9 @@ async function handleChatSend(
     chatStore.addMessage(slug, assistantMessage);
   } catch (error: unknown) {
     if (error instanceof Error && error.name === "AbortError") {
+      console.log(
+        `[ws] chatStreamEnd – slug=${slug} messageId=${messageId} length=${fullContent.length} aborted=true`,
+      );
       hub.broadcast(slug, { type: "chatStreamEnd", messageId, content: fullContent });
 
       if (fullContent) {
@@ -176,6 +188,7 @@ async function handleChatSend(
       }
     } else {
       const errorMsg = error instanceof Error ? error.message : "Unknown error";
+      console.error(`[ws] chatError – slug=${slug} error=${errorMsg}`);
       hub.broadcast(slug, { type: "chatError", error: errorMsg });
     }
   } finally {
