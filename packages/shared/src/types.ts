@@ -62,6 +62,10 @@ export type ServerMessage =
       screenId: string;
       thumbnailUrl: string;
     }
+  | { type: "conceptDeleted"; conceptId: string }
+  | { type: "screenDeleted"; conceptId: string; screenId: string }
+  | { type: "conceptUpdated"; conceptId: string; title?: string; description?: string }
+  | { type: "screenUpdated"; conceptId: string; screen: Screen }
   | {
       type: "chatToolCall";
       messageId: string;

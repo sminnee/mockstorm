@@ -69,4 +69,111 @@ export const TOOLS: Anthropic.Messages.Tool[] = [
       required: ["concept_id", "screen_id"],
     },
   },
+  {
+    name: "delete_concept",
+    description: "Delete a design concept and all its screens.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        concept_id: {
+          type: "string",
+          description: "ID of the concept to delete",
+        },
+      },
+      required: ["concept_id"],
+    },
+  },
+  {
+    name: "delete_screen",
+    description: "Delete a single screen from a concept.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        concept_id: {
+          type: "string",
+          description: "ID of the concept containing the screen",
+        },
+        screen_id: {
+          type: "string",
+          description: "ID of the screen to delete",
+        },
+      },
+      required: ["concept_id", "screen_id"],
+    },
+  },
+  {
+    name: "edit_concept",
+    description: "Update the title and/or description of an existing concept.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        concept_id: {
+          type: "string",
+          description: "ID of the concept to edit",
+        },
+        title: {
+          type: "string",
+          description: "New title for the concept",
+        },
+        description: {
+          type: "string",
+          description: "New description for the concept",
+        },
+      },
+      required: ["concept_id"],
+    },
+  },
+  {
+    name: "edit_screen_meta",
+    description: "Update the title and/or description of an existing screen.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        concept_id: {
+          type: "string",
+          description: "ID of the concept containing the screen",
+        },
+        screen_id: {
+          type: "string",
+          description: "ID of the screen to edit",
+        },
+        title: {
+          type: "string",
+          description: "New title for the screen",
+        },
+        description: {
+          type: "string",
+          description: "New description for the screen",
+        },
+      },
+      required: ["concept_id", "screen_id"],
+    },
+  },
+  {
+    name: "edit_screen",
+    description:
+      "Edit a screen's HTML by performing a text search-and-replace. Finds the first occurrence of old_text in the screen's HTML and replaces it with new_text. Use list_concepts or view_screen to see the current HTML before editing.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        concept_id: {
+          type: "string",
+          description: "ID of the concept containing the screen",
+        },
+        screen_id: {
+          type: "string",
+          description: "ID of the screen to edit",
+        },
+        old_text: {
+          type: "string",
+          description: "Text to find in the screen's HTML",
+        },
+        new_text: {
+          type: "string",
+          description: "Text to replace old_text with",
+        },
+      },
+      required: ["concept_id", "screen_id", "old_text", "new_text"],
+    },
+  },
 ];
