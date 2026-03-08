@@ -2,3 +2,4 @@ packages:
   - 'web'
   - 'server'
   - 'e2e'
+  - 'packages/*'
