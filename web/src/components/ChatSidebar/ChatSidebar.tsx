@@ -1,20 +1,24 @@
 import { Alert, Stack, Text } from "@mantine/core";
-import { type RefObject, useCallback } from "react";
+import { useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { useWorkspaceContext } from "../../contexts/WorkspaceContext";
-import { useChatWs } from "../../hooks/useChatWs";
 import { ChatInput } from "./ChatInput";
 import { ChatMessageList } from "./ChatMessageList";
 
-interface ChatSidebarProps {
-  wsRef: RefObject<WebSocket | null>;
-}
-
-export function ChatSidebar({ wsRef }: ChatSidebarProps) {
-  const { messages, toolCalls, sendMessage, stop, isStreaming, error } = useChatWs(wsRef);
+export function ChatSidebar() {
+  const {
+    messages,
+    toolCalls,
+    sendMessage,
+    stop,
+    isStreaming,
+    chatError,
+    getAnnotationImage,
+    hasAnnotations,
+    setHasAnnotations,
+    setGetAnnotationImage,
+  } = useWorkspaceContext();
   const { cid, sid } = useParams<{ cid?: string; sid?: string }>();
-  const { getAnnotationImage, hasAnnotations, setHasAnnotations, setGetAnnotationImage } =
-    useWorkspaceContext();
 
   const sendWithContext = useCallback(
     async (content: string) => {
@@ -53,9 +57,9 @@ export function ChatSidebar({ wsRef }: ChatSidebarProps) {
         Chat
       </Text>
       <ChatMessageList messages={messages} toolCalls={toolCalls} isStreaming={isStreaming} />
-      {error && (
+      {chatError && (
         <Alert color="red" mx="sm" mb="xs" title="Error" radius="md">
-          {error}
+          {chatError}
         </Alert>
       )}
       <ChatInput
