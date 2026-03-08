@@ -1,4 +1,4 @@
-import { Stack, Text } from "@mantine/core";
+import { Alert, Stack, Text } from "@mantine/core";
 import type { RefObject } from "react";
 import { useChatWs } from "../../hooks/useChatWs";
 import { ChatInput } from "./ChatInput";
@@ -9,7 +9,7 @@ interface ChatSidebarProps {
 }
 
 export function ChatSidebar({ wsRef }: ChatSidebarProps) {
-  const { messages, sendMessage, stop, isStreaming } = useChatWs(wsRef);
+  const { messages, sendMessage, stop, isStreaming, error } = useChatWs(wsRef);
 
   return (
     <Stack h="100%" gap={0}>
@@ -23,6 +23,11 @@ export function ChatSidebar({ wsRef }: ChatSidebarProps) {
         Chat
       </Text>
       <ChatMessageList messages={messages} />
+      {error && (
+        <Alert color="red" mx="sm" mb="xs" title="Error" radius="md">
+          {error}
+        </Alert>
+      )}
       <ChatInput onSend={sendMessage} onStop={stop} isStreaming={isStreaming} />
     </Stack>
   );
