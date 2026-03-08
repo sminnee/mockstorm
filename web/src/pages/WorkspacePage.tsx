@@ -1,7 +1,7 @@
 import { ActionIcon, AppShell, Container, TextInput, Textarea, Title } from "@mantine/core";
 import { useDebouncedCallback } from "@mantine/hooks";
 import { IconHome } from "@tabler/icons-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, Outlet, useParams } from "react-router-dom";
 import { ChatSidebar } from "../components/ChatSidebar";
 import { WorkspaceProvider } from "../contexts/WorkspaceContext";
@@ -15,6 +15,13 @@ export function WorkspacePage() {
   const { concepts } = useConceptsWs(wsRef);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [annotationDataUrl, setAnnotationDataUrl] = useState<string | null>(null);
+  const [hasAnnotations, setHasAnnotations] = useState(false);
+  const getAnnotationImageRef = useRef<(() => Promise<string>) | null>(null);
+
+  const setGetAnnotationImage = useCallback((fn: (() => Promise<string>) | null) => {
+    getAnnotationImageRef.current = fn;
+  }, []);
 
   useEffect(() => {
     if (workspace) {
@@ -41,7 +48,20 @@ export function WorkspacePage() {
   }
 
   return (
-    <WorkspaceProvider value={{ workspace, concepts, wsRef, updateWorkspace }}>
+    <WorkspaceProvider
+      value={{
+        workspace,
+        concepts,
+        wsRef,
+        updateWorkspace,
+        annotationDataUrl,
+        setAnnotationDataUrl,
+        getAnnotationImage: getAnnotationImageRef.current,
+        setGetAnnotationImage,
+        hasAnnotations,
+        setHasAnnotations,
+      }}
+    >
       <AppShell navbar={{ width: 350, breakpoint: "sm" }} padding="md">
         <AppShell.Navbar>
           <ChatSidebar wsRef={wsRef} />

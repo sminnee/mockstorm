@@ -1,4 +1,4 @@
-import { ActionIcon, Group, Textarea } from "@mantine/core";
+import { ActionIcon, Group, Text, Textarea } from "@mantine/core";
 import { IconPlayerStop, IconSend } from "@tabler/icons-react";
 import { type KeyboardEvent, useState } from "react";
 
@@ -6,9 +6,10 @@ interface ChatInputProps {
   onSend: (content: string) => void;
   onStop: () => void;
   isStreaming: boolean;
+  hasAnnotation?: boolean;
 }
 
-export function ChatInput({ onSend, onStop, isStreaming }: ChatInputProps) {
+export function ChatInput({ onSend, onStop, isStreaming, hasAnnotation }: ChatInputProps) {
   const [value, setValue] = useState("");
 
   function handleSend() {
@@ -27,7 +28,12 @@ export function ChatInput({ onSend, onStop, isStreaming }: ChatInputProps) {
   }
 
   return (
-    <Group px="sm" pb="sm" pt="xs" gap="xs" align="flex-end">
+    <Group px="sm" pb="sm" pt="xs" gap="xs" align="flex-end" wrap="wrap">
+      {hasAnnotation && (
+        <Text size="xs" c="red" w="100%">
+          Screenshot will be attached
+        </Text>
+      )}
       <Textarea
         placeholder="Send a message…"
         value={value}
