@@ -3,6 +3,9 @@ import { defineConfig } from "vite";
 
 export default defineConfig({
   plugins: [react()],
+  resolve: {
+    dedupe: ["react", "react-dom"],
+  },
   server: {
     port: Number(process.env.FRONTEND_PORT) || 5173,
     hmr: {
