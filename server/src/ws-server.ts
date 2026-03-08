@@ -5,7 +5,11 @@ import Anthropic from "@anthropic-ai/sdk";
 import type { ClientMessage, ServerMessage } from "@mockstorm/shared";
 import { type WebSocket, WebSocketServer } from "ws";
 import type { ChatStore } from "./chat-store";
+import type { ConceptStore } from "./concept-store";
+import type { Renderer } from "./renderer";
 import { SYSTEM_PROMPT } from "./system-prompt";
+import { type RenderJob, handleToolCall } from "./tool-handler";
+import { TOOLS } from "./tools";
 import { WorkspaceHub } from "./workspace-hub";
 import type { WorkspaceStore } from "./workspace-store";
 
@@ -22,7 +26,10 @@ export function attachWsServer(
   httpServer: UpgradeEmitter,
   store: WorkspaceStore,
   chatStore: ChatStore,
-): void {
+  conceptStore: ConceptStore,
+  renderer: Renderer,
+  dataDir: string,
+): WorkspaceHub {
   const wss = new WebSocketServer({ noServer: true });
   const hub = new WorkspaceHub();
   const activeStreams = new Map<string, AbortController>();
@@ -59,6 +66,12 @@ export function attachWsServer(
     };
     ws.send(JSON.stringify(historyMsg));
 
+    const conceptsMsg: ServerMessage = {
+      type: "conceptsInit",
+      concepts: conceptStore.getConcepts(slug),
+    };
+    ws.send(JSON.stringify(conceptsMsg));
+
     ws.on("message", (data) => {
       let msg: ClientMessage;
       try {
@@ -75,11 +88,23 @@ export function attachWsServer(
         console.log(`[ws] workspaceUpdate – slug=${slug} fields=${Object.keys(fields).join(",")}`);
         store.update(slug, fields);
 
-        const updateMsg: ServerMessage = { type: "workspaceUpdated", ...fields };
+        const updateMsg: ServerMessage = {
+          type: "workspaceUpdated",
+          ...fields,
+        };
         hub.broadcast(slug, updateMsg, ws);
       } else if (msg.type === "chatSend") {
         console.log(`[ws] chatSend – slug=${slug} contentLength=${msg.content.length}`);
-        void handleChatSend(slug, msg.content, hub, chatStore, activeStreams);
+        void handleChatSend(
+          slug,
+          msg.content,
+          hub,
+          chatStore,
+          conceptStore,
+          renderer,
+          activeStreams,
+          dataDir,
+        );
       } else if (msg.type === "chatStop") {
         console.log(`[ws] chatStop – slug=${slug}`);
         const controller = activeStreams.get(slug);
@@ -94,6 +119,8 @@ export function attachWsServer(
       hub.unsubscribe(slug, ws);
     });
   });
+
+  return hub;
 }
 
 async function handleChatSend(
@@ -101,7 +128,10 @@ async function handleChatSend(
   content: string,
   hub: WorkspaceHub,
   chatStore: ChatStore,
+  conceptStore: ConceptStore,
+  renderer: Renderer,
   activeStreams: Map<string, AbortController>,
+  dataDir: string,
 ): Promise<void> {
   const userMessage = {
     id: crypto.randomUUID(),
@@ -111,6 +141,9 @@ async function handleChatSend(
   };
   chatStore.addMessage(slug, userMessage);
   hub.broadcast(slug, { type: "chatUserMessage", message: userMessage });
+
+  // Add user message to raw history
+  chatStore.addRawMessages(slug, [{ role: "user", content }]);
 
   const messageId = crypto.randomUUID();
   const controller = new AbortController();
@@ -122,46 +155,33 @@ async function handleChatSend(
   let fullContent = "";
 
   try {
-    const history = chatStore.getMessages(slug);
-    const apiMessages = history.map((m, i) => ({
-      role: m.role,
-      content:
-        i === history.length - 2
-          ? [
-              {
-                type: "text" as const,
-                text: m.content,
-                cache_control: { type: "ephemeral" as const },
-              },
-            ]
-          : m.content,
-    }));
-
-    const stream = anthropic.messages.stream(
-      {
-        model: "claude-sonnet-4-6",
-        max_tokens: 4096,
-        system: [{ type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
-        messages: apiMessages,
-      },
-      { signal: controller.signal },
-    );
-
-    for await (const event of stream) {
-      if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
-        fullContent += event.delta.text;
+    await runToolLoop(
+      slug,
+      messageId,
+      hub,
+      chatStore,
+      conceptStore,
+      renderer,
+      controller,
+      dataDir,
+      (delta) => {
+        fullContent += delta;
         hub.broadcast(slug, {
           type: "chatStreamChunk",
           messageId,
-          delta: event.delta.text,
+          delta,
         });
-      }
-    }
+      },
+    );
 
     console.log(
       `[ws] chatStreamEnd – slug=${slug} messageId=${messageId} length=${fullContent.length} aborted=false`,
     );
-    hub.broadcast(slug, { type: "chatStreamEnd", messageId, content: fullContent });
+    hub.broadcast(slug, {
+      type: "chatStreamEnd",
+      messageId,
+      content: fullContent,
+    });
 
     const assistantMessage = {
       id: messageId,
@@ -175,7 +195,11 @@ async function handleChatSend(
       console.log(
         `[ws] chatStreamEnd – slug=${slug} messageId=${messageId} length=${fullContent.length} aborted=true`,
       );
-      hub.broadcast(slug, { type: "chatStreamEnd", messageId, content: fullContent });
+      hub.broadcast(slug, {
+        type: "chatStreamEnd",
+        messageId,
+        content: fullContent,
+      });
 
       if (fullContent) {
         const assistantMessage = {
@@ -193,5 +217,164 @@ async function handleChatSend(
     }
   } finally {
     activeStreams.delete(slug);
+  }
+}
+
+async function runToolLoop(
+  slug: string,
+  messageId: string,
+  hub: WorkspaceHub,
+  chatStore: ChatStore,
+  conceptStore: ConceptStore,
+  renderer: Renderer,
+  controller: AbortController,
+  dataDir: string,
+  onTextDelta: (delta: string) => void,
+): Promise<void> {
+  const rawHistory = chatStore.getRawHistory(slug);
+
+  // Apply cache_control to second-to-last message for prompt caching
+  const apiMessages = rawHistory.map((m, i) => {
+    if (i === rawHistory.length - 2 && typeof m.content === "string") {
+      return {
+        ...m,
+        content: [
+          {
+            type: "text" as const,
+            text: m.content,
+            cache_control: { type: "ephemeral" as const },
+          },
+        ],
+      };
+    }
+    return m;
+  });
+
+  let loopMessages: Anthropic.Messages.MessageParam[] = apiMessages;
+
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    const stream = anthropic.messages.stream(
+      {
+        model: "claude-sonnet-4-6",
+        max_tokens: 4096,
+        system: [
+          {
+            type: "text",
+            text: SYSTEM_PROMPT,
+            cache_control: { type: "ephemeral" },
+          },
+        ],
+        messages: loopMessages,
+        tools: TOOLS,
+      },
+      { signal: controller.signal },
+    );
+
+    // Collect the full response to inspect tool_use blocks
+    const textParts: string[] = [];
+    const toolUseBlocks: Array<{
+      id: string;
+      name: string;
+      input: Record<string, unknown>;
+    }> = [];
+    let currentToolInput = "";
+    let currentToolId = "";
+    let currentToolName = "";
+
+    for await (const event of stream) {
+      if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
+        textParts.push(event.delta.text);
+        onTextDelta(event.delta.text);
+      } else if (event.type === "content_block_delta" && event.delta.type === "input_json_delta") {
+        currentToolInput += event.delta.partial_json;
+      } else if (event.type === "content_block_start") {
+        if (event.content_block.type === "tool_use") {
+          currentToolId = event.content_block.id;
+          currentToolName = event.content_block.name;
+          currentToolInput = "";
+        }
+      } else if (event.type === "content_block_stop") {
+        if (currentToolId && currentToolName) {
+          let parsedInput: Record<string, unknown> = {};
+          try {
+            parsedInput = JSON.parse(currentToolInput || "{}") as Record<string, unknown>;
+          } catch {
+            // empty input
+          }
+          toolUseBlocks.push({
+            id: currentToolId,
+            name: currentToolName,
+            input: parsedInput,
+          });
+          currentToolId = "";
+          currentToolName = "";
+          currentToolInput = "";
+        }
+      }
+    }
+
+    // Build the assistant message content blocks for raw history
+    const assistantContentBlocks: Anthropic.Messages.ContentBlockParam[] = [];
+    if (textParts.join("")) {
+      assistantContentBlocks.push({
+        type: "text",
+        text: textParts.join(""),
+      });
+    }
+    for (const tool of toolUseBlocks) {
+      assistantContentBlocks.push({
+        type: "tool_use",
+        id: tool.id,
+        name: tool.name,
+        input: tool.input,
+      });
+    }
+
+    if (toolUseBlocks.length === 0) {
+      // No tool calls — we're done
+      chatStore.addRawMessages(slug, [{ role: "assistant", content: assistantContentBlocks }]);
+      break;
+    }
+
+    // Execute tool calls and collect results
+    const toolResults: Anthropic.Messages.ToolResultBlockParam[] = [];
+    for (const tool of toolUseBlocks) {
+      const enqueue = (job: RenderJob) => renderer.enqueue(job);
+      const result = handleToolCall(
+        tool.name,
+        tool.input,
+        slug,
+        conceptStore,
+        hub,
+        enqueue,
+        dataDir,
+      );
+
+      // Broadcast tool call to chat UI
+      const toolCallMsg: ServerMessage = {
+        type: "chatToolCall",
+        messageId,
+        toolName: tool.name,
+        args: tool.input,
+        result: result.description,
+      };
+      hub.broadcast(slug, toolCallMsg);
+
+      toolResults.push({
+        type: "tool_result",
+        tool_use_id: tool.id,
+        content: result.content ?? "",
+      });
+    }
+
+    // Save assistant + tool_result messages to raw history
+    chatStore.addRawMessages(slug, [
+      { role: "assistant", content: assistantContentBlocks },
+      { role: "user", content: toolResults },
+    ]);
+
+    // Continue the loop with updated messages
+    loopMessages = chatStore.getRawHistory(slug);
   }
 }
