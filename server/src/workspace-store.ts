@@ -49,6 +49,15 @@ export class WorkspaceStore {
     return this.workspaces.get(slug);
   }
 
+  getMany(slugs: string[]): Workspace[] {
+    const results: Workspace[] = [];
+    for (const slug of slugs) {
+      const workspace = this.workspaces.get(slug);
+      if (workspace) results.push(workspace);
+    }
+    return results;
+  }
+
   update(
     slug: string,
     fields: Partial<Pick<Workspace, "title" | "description">>,
