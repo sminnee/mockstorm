@@ -74,12 +74,12 @@ export function ChatMessageList({ messages, toolCalls, isStreaming }: ChatMessag
           <Paper
             p="xs"
             radius="md"
-            bg={msg.role === "user" ? "blue.6" : "gray.1"}
+            bg={msg.role === "user" ? "navy.6" : "gray.1"}
             {...(msg.role === "user" ? { c: "white" } : {})}
             maw="85%"
           >
             {msg.imageBase64 && msg.role === "user" && (
-              <Text size="xs" c="blue.2" mb={4}>
+              <Text size="xs" c="navy.2" mb={4}>
                 📎 Screenshot attached
               </Text>
             )}

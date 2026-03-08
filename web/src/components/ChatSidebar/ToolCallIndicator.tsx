@@ -17,7 +17,7 @@ export function ToolCallIndicator({ toolCall }: ToolCallIndicatorProps) {
         <IconTool size={12} />
       </ThemeIcon>
       {link ? (
-        <Text component={Link} to={link} size="xs" c="blue" style={{ textDecoration: "none" }}>
+        <Text component={Link} to={link} size="xs" c="azure" style={{ textDecoration: "none" }}>
           {toolCall.result}
         </Text>
       ) : (

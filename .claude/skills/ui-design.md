@@ -24,10 +24,26 @@ This keeps design decisions visible and reversible.
 |-------|-------|------|
 | Background | `#f8fafc` | `#0f0f12` |
 | Surface | `#ffffff` | `#1a1a24` |
-| Accent (primary) | `#0ea5a0` (teal) | `#0ea5a0` |
+| Accent (primary) | navy shade 6 | navy shade 4 |
 | Text | `#1e293b` | `#e8e8f0` |
 
 Tokens are implemented via `web/src/theme.ts` and the Mantine CSS variable system.
+
+## Colour Palettes
+
+All palettes are generated via OKLCH colour space interpolation (`web/src/lib/color-palette.ts`).
+Each palette has 10 shades (0=lightest, 9=darkest) with perceptually uniform lightness steps.
+
+| Name | Base hex | Role |
+|------|----------|------|
+| `navy` | `#262e56` | Primary brand colour (`primaryColor`) |
+| `azure` | `#1437e3` | Accent / CTA / links |
+| `emerald` | `#16944f` | Success states |
+| `amber` | `#e09500` | Warning states |
+| `crimson` | `#c41e3a` | Error / danger states |
+
+Use semantic palette names in component code: `color="navy"`, `color="crimson"`, etc.
+Avoid Mantine built-in names like `blue`, `red`, `teal` — use the project palettes instead.
 
 ## Typography
 
@@ -98,5 +114,5 @@ export const Loading: Story = () => <Button loading>Loading</Button>;
 
 - Mantine components include ARIA roles by default for common patterns
 - Always pass `aria-label` on icon-only `ActionIcon` buttons
-- Ensure colour contrast meets WCAG AA (Mantine's teal palette is designed for this)
+- Ensure colour contrast meets WCAG AA (the navy palette is designed for this)
 - Use semantic HTML via `component` prop when needed (e.g., `<Title component="h2">`)

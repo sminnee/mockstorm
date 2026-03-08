@@ -30,7 +30,7 @@ export function ChatInput({ onSend, onStop, isStreaming, hasAnnotation }: ChatIn
   return (
     <Group px="sm" pb="sm" pt="xs" gap="xs" align="flex-end" wrap="wrap">
       {hasAnnotation && (
-        <Text size="xs" c="red" w="100%">
+        <Text size="xs" c="crimson" w="100%">
           Screenshot will be attached
         </Text>
       )}
@@ -45,7 +45,7 @@ export function ChatInput({ onSend, onStop, isStreaming, hasAnnotation }: ChatIn
         style={{ flex: 1 }}
       />
       {isStreaming ? (
-        <ActionIcon variant="filled" color="red" size="lg" onClick={onStop}>
+        <ActionIcon variant="filled" color="crimson" size="lg" onClick={onStop}>
           <IconPlayerStop size={18} />
         </ActionIcon>
       ) : (

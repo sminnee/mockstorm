@@ -58,7 +58,7 @@ export function ChatSidebar() {
       </Text>
       <ChatMessageList messages={messages} toolCalls={toolCalls} isStreaming={isStreaming} />
       {chatError && (
-        <Alert color="red" mx="sm" mb="xs" title="Error" radius="md">
+        <Alert color="crimson" mx="sm" mb="xs" title="Error" radius="md">
           {chatError}
         </Alert>
       )}

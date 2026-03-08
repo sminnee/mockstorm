@@ -82,7 +82,7 @@ export function ConversationView() {
         )}
 
         {chatError && (
-          <Alert color="red" mx="sm" mb="xs" title="Error" radius="md">
+          <Alert color="crimson" mx="sm" mb="xs" title="Error" radius="md">
             {chatError}
           </Alert>
         )}

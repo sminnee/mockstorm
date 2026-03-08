@@ -100,7 +100,7 @@ export function HomePage() {
             </Text>
           </Group>
           <Group gap="xs">
-            <Avatar size="sm" color="blue" />
+            <Avatar size="sm" color="navy" />
             <Text size="sm">User</Text>
           </Group>
         </Group>
@@ -109,7 +109,7 @@ export function HomePage() {
       <Container size="lg" py="xl">
         <Group justify="space-between" mb="xl">
           <Title order={1}>Workspaces</Title>
-          <Button color="dark" leftSection={<IconPlus size={16} />} onClick={openModal}>
+          <Button color="navy" leftSection={<IconPlus size={16} />} onClick={openModal}>
             New Workspace
           </Button>
         </Group>
