@@ -54,15 +54,13 @@ export class Renderer {
     this.onComplete = onComplete;
   }
 
-  enqueue(job: RenderJob): void {
-    this.queue.push({
-      job,
-      resolve: () => {},
-      reject: () => {},
+  enqueue(job: RenderJob): Promise<string> {
+    return new Promise<string>((resolve, reject) => {
+      this.queue.push({ job, resolve, reject });
+      if (!this.processing) {
+        void this.processQueue();
+      }
     });
-    if (!this.processing) {
-      void this.processQueue();
-    }
   }
 
   private async ensureBrowser(): Promise<Browser> {

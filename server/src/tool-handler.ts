@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import type Anthropic from "@anthropic-ai/sdk";
-import type { Concept, Screen, ServerMessage, ViewportPreset } from "@mockstorm/shared";
+import type { Concept, ServerMessage, ViewportPreset } from "@mockstorm/shared";
 import type { ConceptStore } from "./concept-store";
 import type { WorkspaceHub } from "./workspace-hub";
 
@@ -22,7 +22,7 @@ export async function handleToolCall(
   slug: string,
   conceptStore: ConceptStore,
   hub: WorkspaceHub,
-  enqueueRender: (job: RenderJob) => void,
+  enqueueRender: (job: RenderJob) => Promise<string>,
   dataDir: string,
 ): Promise<{ content: ToolResult; description: string; conceptId?: string; screenId?: string }> {
   switch (toolName) {
@@ -32,20 +32,6 @@ export async function handleToolCall(
         slug,
         conceptStore,
         hub,
-      );
-    case "add_screen":
-      return handleAddScreen(
-        toolInput as {
-          concept_id: string;
-          title: string;
-          description: string;
-          html: string;
-          viewport?: ViewportPreset;
-        },
-        slug,
-        conceptStore,
-        hub,
-        enqueueRender,
       );
     case "list_concepts":
       return handleListConcepts(slug, conceptStore);
@@ -86,14 +72,6 @@ export async function handleToolCall(
         hub,
         enqueueRender,
       );
-    case "edit_screen":
-      return handleEditScreen(
-        toolInput as { concept_id: string; screen_id: string; old_text: string; new_text: string },
-        slug,
-        conceptStore,
-        hub,
-        enqueueRender,
-      );
     default:
       return {
         content: `Unknown tool: ${toolName}`,
@@ -124,61 +102,6 @@ function handleAddConcept(
     content: `Created concept "${concept.title}" with id ${concept.id}`,
     description: `Created concept: ${concept.title}`,
     conceptId: concept.id,
-  };
-}
-
-function handleAddScreen(
-  input: {
-    concept_id: string;
-    title: string;
-    description: string;
-    html: string;
-    viewport?: ViewportPreset;
-  },
-  slug: string,
-  conceptStore: ConceptStore,
-  hub: WorkspaceHub,
-  enqueueRender: (job: RenderJob) => void,
-): { content: string; description: string; conceptId?: string; screenId?: string } {
-  const viewport = input.viewport ?? "laptop";
-  const screen: Screen = {
-    id: crypto.randomUUID(),
-    title: input.title,
-    description: input.description,
-    html: input.html,
-    viewport,
-    thumbnailUrl: null,
-    createdAt: new Date().toISOString(),
-  };
-
-  const added = conceptStore.addScreen(slug, input.concept_id, screen);
-  if (!added) {
-    return {
-      content: `Error: concept ${input.concept_id} not found`,
-      description: "Failed to add screen: concept not found",
-    };
-  }
-
-  const msg: ServerMessage = {
-    type: "screenAdded",
-    conceptId: input.concept_id,
-    screen,
-  };
-  hub.broadcast(slug, msg);
-
-  enqueueRender({
-    slug,
-    conceptId: input.concept_id,
-    screenId: screen.id,
-    html: input.html,
-    viewport,
-  });
-
-  return {
-    content: `Added screen "${screen.title}" (id: ${screen.id}) to concept ${input.concept_id}. Thumbnail is rendering.`,
-    description: `Added screen: ${screen.title}`,
-    conceptId: input.concept_id,
-    screenId: screen.id,
   };
 }
 
@@ -308,7 +231,7 @@ function handleEditScreenMeta(
   slug: string,
   conceptStore: ConceptStore,
   hub: WorkspaceHub,
-  enqueueRender: (job: RenderJob) => void,
+  enqueueRender: (job: RenderJob) => Promise<string>,
 ): { content: string; description: string; conceptId: string; screenId: string } {
   const oldScreen = conceptStore.getScreen(slug, input.concept_id, input.screen_id);
   const oldViewport = oldScreen?.viewport ?? "laptop";
@@ -350,49 +273,6 @@ function handleEditScreenMeta(
     description: "Updated screen metadata",
     conceptId: input.concept_id,
     screenId: input.screen_id,
-  };
-}
-
-function handleEditScreen(
-  input: { concept_id: string; screen_id: string; old_text: string; new_text: string },
-  slug: string,
-  conceptStore: ConceptStore,
-  hub: WorkspaceHub,
-  enqueueRender: (job: RenderJob) => void,
-): { content: string; description: string; conceptId: string; screenId: string } {
-  const screen = conceptStore.replaceScreenHtml(
-    slug,
-    input.concept_id,
-    input.screen_id,
-    input.old_text,
-    input.new_text,
-  );
-  if (screen === false) {
-    return {
-      content: `Error: could not find old_text in screen ${input.screen_id} HTML. Use list_concepts or view_screen to check the current HTML.`,
-      description: "Failed to edit screen HTML: text not found",
-      conceptId: input.concept_id,
-      screenId: input.screen_id,
-    };
-  }
-  const msg: ServerMessage = {
-    type: "screenUpdated",
-    conceptId: input.concept_id,
-    screen,
-  };
-  hub.broadcast(slug, msg);
-  enqueueRender({
-    slug,
-    conceptId: input.concept_id,
-    screenId: screen.id,
-    html: screen.html,
-    viewport: screen.viewport ?? "laptop",
-  });
-  return {
-    content: "Updated screen HTML and re-rendering thumbnail.",
-    description: "Edited screen HTML",
-    conceptId: input.concept_id,
-    screenId: screen.id,
   };
 }
 
