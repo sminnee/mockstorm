@@ -3,12 +3,46 @@ import type { ChatMessage, ToolCallInfo } from "@mockstorm/shared";
 import { useRef } from "react";
 import { ToolCallIndicator } from "./ToolCallIndicator";
 
+const dotStyle = (delay: number): React.CSSProperties => ({
+  width: 6,
+  height: 6,
+  borderRadius: "50%",
+  backgroundColor: "var(--mantine-color-gray-5)",
+  animation: "thinking-pulse 1.4s infinite ease-in-out",
+  animationDelay: `${delay}s`,
+});
+
+function ThinkingIndicator() {
+  return (
+    <Box mb="xs" style={{ display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
+      <style>
+        {`@keyframes thinking-pulse {
+          0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
+          40% { opacity: 1; transform: scale(1); }
+        }`}
+      </style>
+      <Paper
+        p="xs"
+        px="md"
+        radius="md"
+        bg="gray.1"
+        style={{ display: "flex", gap: 4, alignItems: "center", minHeight: 32 }}
+      >
+        <span style={dotStyle(0)} />
+        <span style={dotStyle(0.16)} />
+        <span style={dotStyle(0.32)} />
+      </Paper>
+    </Box>
+  );
+}
+
 interface ChatMessageListProps {
   messages: ChatMessage[];
   toolCalls: Map<string, ToolCallInfo[]>;
+  isStreaming?: boolean;
 }
 
-export function ChatMessageList({ messages, toolCalls }: ChatMessageListProps) {
+export function ChatMessageList({ messages, toolCalls, isStreaming }: ChatMessageListProps) {
   const viewport = useRef<HTMLDivElement>(null);
   const prevLenRef = useRef(0);
 
@@ -50,6 +84,7 @@ export function ChatMessageList({ messages, toolCalls }: ChatMessageListProps) {
           </Paper>
         </Box>
       ))}
+      {isStreaming && <ThinkingIndicator />}
     </ScrollArea>
   );
 }

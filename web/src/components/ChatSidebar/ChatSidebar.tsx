@@ -34,7 +34,7 @@ export function ChatSidebar({ wsRef }: ChatSidebarProps) {
       >
         Chat
       </Text>
-      <ChatMessageList messages={messages} toolCalls={toolCalls} />
+      <ChatMessageList messages={messages} toolCalls={toolCalls} isStreaming={isStreaming} />
       {error && (
         <Alert color="red" mx="sm" mb="xs" title="Error" radius="md">
           {error}
