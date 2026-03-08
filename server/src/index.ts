@@ -6,6 +6,7 @@ import { Hono } from "hono";
 import { ChatStore } from "./chat-store";
 import { ConceptStore } from "./concept-store";
 import { Renderer } from "./renderer";
+import { wireframeCss } from "./wireframe-css";
 import type { WorkspaceHub } from "./workspace-hub";
 import { WorkspaceStore } from "./workspace-store";
 import { attachWsServer } from "./ws-server";
@@ -42,6 +43,10 @@ export function createApp(store: WorkspaceStore, dataDir: string) {
     }
   });
 
+  app.get("/api/wireframe.css", (c) => {
+    return c.text(wireframeCss, 200, { "Content-Type": "text/css" });
+  });
+
   app.get("/api/workspaces/:slug/screens/:screenId/html", async (c) => {
     const slug = c.req.param("slug");
     const screenId = c.req.param("screenId");
@@ -54,7 +59,17 @@ export function createApp(store: WorkspaceStore, dataDir: string) {
       for (const concept of concepts) {
         const screen = concept.screens.find((s) => s.id === screenId);
         if (screen) {
-          return c.html(screen.html);
+          return c.html(`<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/api/wireframe.css">
+</head>
+<body>
+${screen.html}
+</body>
+</html>`);
         }
       }
       return c.json({ error: "Screen not found" }, 404);

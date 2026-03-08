@@ -34,7 +34,8 @@ export const TOOLS: Anthropic.Messages.Tool[] = [
         },
         html: {
           type: "string",
-          description: "HTML fragment for the screen mockup",
+          description:
+            "HTML fragment using wireframe utility classes. Wrap content in a div with class 'screen'.",
         },
       },
       required: ["concept_id", "title", "description", "html"],

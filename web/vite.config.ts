@@ -6,6 +6,9 @@ export default defineConfig({
   resolve: {
     dedupe: ["react", "react-dom"],
   },
+  optimizeDeps: {
+    exclude: ["@mockstorm/shared"],
+  },
   server: {
     port: Number(process.env.FRONTEND_PORT) || 5173,
     hmr: {

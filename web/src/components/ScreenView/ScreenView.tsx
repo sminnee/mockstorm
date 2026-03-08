@@ -55,7 +55,7 @@ export function ScreenView() {
         {screen.title}
       </Title>
       <iframe
-        srcDoc={screen.html}
+        src={`/api/workspaces/${slug}/screens/${sid}/html`}
         sandbox="allow-same-origin"
         title={screen.title}
         style={{

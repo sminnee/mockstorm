@@ -1,6 +1,7 @@
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import type { RenderJob } from "./tool-handler";
+import { wireframeCss } from "./wireframe-css";
 
 interface Browser {
   newPage(): Promise<Page>;
@@ -20,10 +21,7 @@ function wrapHtml(fragment: string): string {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 16px; }
-  </style>
+  <style>${wireframeCss}</style>
 </head>
 <body>
 ${fragment}
