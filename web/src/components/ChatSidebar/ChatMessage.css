@@ -1,0 +1,75 @@
+.chat-message-markdown {
+  font-size: var(--mantine-font-size-sm);
+  line-height: 1.5;
+}
+
+.chat-message-markdown > :first-child {
+  margin-top: 0;
+}
+
+.chat-message-markdown > :last-child {
+  margin-bottom: 0;
+}
+
+.chat-message-markdown p {
+  margin-block: 0.35em;
+}
+
+.chat-message-markdown h1,
+.chat-message-markdown h2,
+.chat-message-markdown h3,
+.chat-message-markdown h4 {
+  margin-block: 0.5em 0.25em;
+  font-size: 1em;
+  font-weight: 700;
+}
+
+.chat-message-markdown h1 {
+  font-size: 1.15em;
+}
+
+.chat-message-markdown h2 {
+  font-size: 1.1em;
+}
+
+.chat-message-markdown ul,
+.chat-message-markdown ol {
+  margin-block: 0.35em;
+  padding-left: 1.5em;
+}
+
+.chat-message-markdown li {
+  margin-block: 0.15em;
+}
+
+.chat-message-markdown code {
+  font-size: 0.9em;
+  padding: 0.1em 0.3em;
+  border-radius: 3px;
+  background: var(--mantine-color-gray-2);
+}
+
+.chat-message-markdown pre {
+  margin-block: 0.35em;
+  padding: 0.5em;
+  border-radius: 4px;
+  background: var(--mantine-color-gray-2);
+  overflow-x: auto;
+}
+
+.chat-message-markdown pre code {
+  padding: 0;
+  background: none;
+}
+
+.chat-message-markdown table {
+  border-collapse: collapse;
+  margin-block: 0.35em;
+  font-size: 0.9em;
+}
+
+.chat-message-markdown th,
+.chat-message-markdown td {
+  border: 1px solid var(--mantine-color-gray-3);
+  padding: 0.25em 0.5em;
+}

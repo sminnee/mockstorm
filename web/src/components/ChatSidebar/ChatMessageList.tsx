@@ -1,6 +1,7 @@
 import { Box, Paper, ScrollArea, Text } from "@mantine/core";
 import type { ChatMessage, ToolCallInfo } from "@mockstorm/shared";
 import { useRef } from "react";
+import { ChatMessageBubble } from "./ChatMessage";
 import { ToolCallIndicator } from "./ToolCallIndicator";
 
 const dotStyle = (delay: number): React.CSSProperties => ({
@@ -83,9 +84,7 @@ export function ChatMessageList({ messages, toolCalls, isStreaming }: ChatMessag
                 📎 Screenshot attached
               </Text>
             )}
-            <Text size="sm" style={{ whiteSpace: "pre-wrap" }}>
-              {msg.content}
-            </Text>
+            <ChatMessageBubble content={msg.content} role={msg.role} />
           </Paper>
         </Box>
       ))}
