@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+pnpm install
+pnpm -C e2e exec playwright install

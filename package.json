@@ -1,0 +1,20 @@
+{
+  "name": "mockstorm",
+  "private": true,
+  "scripts": {
+    "build": "pnpm -r build",
+    "test": "vitest run",
+    "test:e2e": "pnpm -C e2e test",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "typecheck": "pnpm -r typecheck",
+    "knip": "knip",
+    "check": "pnpm lint && pnpm typecheck && pnpm test"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "knip": "^5.50.0",
+    "typescript": "^5.8.2",
+    "vitest": "^3.0.0"
+  }
+}

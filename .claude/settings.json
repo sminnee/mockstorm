@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(bin/setup)",
+      "Bash(bin/dev)",
+      "Bash(bin/check)",
+      "Bash(bin/test)",
+      "Bash(bin/test-e2e)",
+      "Bash(bin/lint)",
+      "Bash(bin/typecheck)",
+      "Bash(pnpm install*)",
+      "Bash(pnpm lint*)",
+      "Bash(pnpm typecheck*)",
+      "Bash(pnpm test*)",
+      "Bash(pnpm build*)",
+      "Bash(pnpm knip*)",
+      "Bash(pnpm -C*)",
+      "Bash(pnpm -r*)"
+    ]
+  }
+}
