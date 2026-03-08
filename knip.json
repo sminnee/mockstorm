@@ -1,0 +1,7 @@
+{
+  "workspaces": {
+    "web": { "entry": ["src/main.tsx"] },
+    "server": { "entry": ["src/index.ts"] },
+    "e2e": { "entry": ["tests/**/*.spec.ts"] }
+  }
+}

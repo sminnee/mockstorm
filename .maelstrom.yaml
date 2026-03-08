@@ -1,0 +1,13 @@
+# Port names - each gets a _PORT environment variable
+port_names:
+  - FRONTEND
+  - FRONTEND_HMR
+  - SERVER
+  - LADLE
+
+linear:
+  team_id: 3201e7ca-cceb-4079-b8ef-51ffbde14db7
+  product_label: mockstorm
+
+# Command to prepare environment
+install_cmd: pnpm install
