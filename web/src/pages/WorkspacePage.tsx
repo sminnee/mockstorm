@@ -1,10 +1,11 @@
-import { ActionIcon, AppShell, Container, TextInput, Textarea, Title } from "@mantine/core";
+import { ActionIcon, AppShell, Container, Title } from "@mantine/core";
 import { useDebouncedCallback } from "@mantine/hooks";
 import { IconHome } from "@tabler/icons-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, Outlet, useParams } from "react-router-dom";
 import { ChatSidebar } from "../components/ChatSidebar";
 import { ConversationView } from "../components/ConversationView/ConversationView";
+import { EditableHeader } from "../components/EditableHeader/EditableHeader";
 import { WorkspaceProvider } from "../contexts/WorkspaceContext";
 import { useChatWs } from "../hooks/useChatWs";
 import { useConceptsWs } from "../hooks/useConceptsWs";
@@ -98,26 +99,17 @@ export function WorkspacePage() {
           <ActionIcon variant="subtle" component={Link} to="/" mb="xs" aria-label="Home">
             <IconHome size={20} />
           </ActionIcon>
-          <TextInput
-            size="xl"
-            value={title}
-            onChange={(e) => {
-              setTitle(e.currentTarget.value);
-              handleTitleChange(e.currentTarget.value);
+          <EditableHeader
+            title={title}
+            description={description}
+            onTitleChange={(value) => {
+              setTitle(value);
+              handleTitleChange(value);
             }}
-            mb="md"
-            styles={{ input: { fontWeight: 700, fontSize: "1.5rem" } }}
-          />
-          <Textarea
-            placeholder="Add a description…"
-            value={description}
-            onChange={(e) => {
-              setDescription(e.currentTarget.value);
-              handleDescriptionChange(e.currentTarget.value);
+            onDescriptionChange={(value) => {
+              setDescription(value);
+              handleDescriptionChange(value);
             }}
-            minRows={2}
-            autosize
-            mb="md"
           />
           <Outlet />
         </AppShell.Main>
