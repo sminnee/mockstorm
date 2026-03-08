@@ -1,8 +1,6 @@
 import type { ServerMessage, Workspace } from "@mockstorm/shared";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-const WS_BASE = "ws://localhost:3001";
-
 export function useWorkspaceWs(slug: string): {
   workspace: Workspace | null;
   updateWorkspace: (fields: Partial<Pick<Workspace, "title" | "description">>) => void;
@@ -11,7 +9,8 @@ export function useWorkspaceWs(slug: string): {
   const wsRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
-    const ws = new WebSocket(`${WS_BASE}/ws/${slug}`);
+    const wsBase = `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}`;
+    const ws = new WebSocket(`${wsBase}/ws/${slug}`);
     wsRef.current = ws;
 
     ws.onmessage = (event: MessageEvent<string>) => {
