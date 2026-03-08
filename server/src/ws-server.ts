@@ -358,6 +358,8 @@ async function runToolLoop(
         toolName: tool.name,
         args: tool.input,
         result: result.description,
+        ...(result.conceptId ? { conceptId: result.conceptId } : {}),
+        ...(result.screenId ? { screenId: result.screenId } : {}),
       };
       hub.broadcast(slug, toolCallMsg);
 

@@ -35,6 +35,8 @@ export interface ToolCallInfo {
   toolName: string;
   args: Record<string, unknown>;
   result: string;
+  conceptId?: string;
+  screenId?: string;
 }
 
 export type ClientMessage =
@@ -66,4 +68,6 @@ export type ServerMessage =
       toolName: string;
       args: Record<string, unknown>;
       result: string;
+      conceptId?: string;
+      screenId?: string;
     };

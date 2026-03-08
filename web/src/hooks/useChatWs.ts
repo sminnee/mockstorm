@@ -82,6 +82,8 @@ export function useChatWs(wsRef: RefObject<WebSocket | null>): {
                 toolName: msg.toolName,
                 args: msg.args,
                 result: msg.result,
+                ...(msg.conceptId ? { conceptId: msg.conceptId } : {}),
+                ...(msg.screenId ? { screenId: msg.screenId } : {}),
               },
             ]);
             return next;

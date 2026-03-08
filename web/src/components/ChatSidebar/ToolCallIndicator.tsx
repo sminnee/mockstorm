@@ -30,12 +30,11 @@ export function ToolCallIndicator({ toolCall }: ToolCallIndicatorProps) {
 }
 
 function getToolLink(toolCall: ToolCallInfo, slug: string): string | null {
-  if (toolCall.toolName === "add_concept") {
-    return `/${slug}`;
+  if (toolCall.toolName === "add_concept" && toolCall.conceptId) {
+    return `/${slug}/concepts/${toolCall.conceptId}`;
   }
-  if (toolCall.toolName === "add_screen") {
-    const conceptId = toolCall.args.concept_id as string | undefined;
-    if (conceptId) return `/${slug}/concepts/${conceptId}`;
+  if (toolCall.toolName === "add_screen" && toolCall.conceptId && toolCall.screenId) {
+    return `/${slug}/concepts/${toolCall.conceptId}/screens/${toolCall.screenId}`;
   }
   return null;
 }
