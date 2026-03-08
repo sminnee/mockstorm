@@ -22,7 +22,7 @@ export function handleToolCall(
   hub: WorkspaceHub,
   enqueueRender: (job: RenderJob) => void,
   dataDir: string,
-): { content: ToolResult; description: string } {
+): { content: ToolResult; description: string; conceptId?: string; screenId?: string } {
   switch (toolName) {
     case "add_concept":
       return handleAddConcept(
@@ -66,7 +66,7 @@ function handleAddConcept(
   slug: string,
   conceptStore: ConceptStore,
   hub: WorkspaceHub,
-): { content: string; description: string } {
+): { content: string; description: string; conceptId: string } {
   const concept: Concept = {
     id: crypto.randomUUID(),
     title: input.title,
@@ -82,6 +82,7 @@ function handleAddConcept(
   return {
     content: `Created concept "${concept.title}" with id ${concept.id}`,
     description: `Created concept: ${concept.title}`,
+    conceptId: concept.id,
   };
 }
 
@@ -96,7 +97,7 @@ function handleAddScreen(
   conceptStore: ConceptStore,
   hub: WorkspaceHub,
   enqueueRender: (job: RenderJob) => void,
-): { content: string; description: string } {
+): { content: string; description: string; conceptId?: string; screenId?: string } {
   const screen: Screen = {
     id: crypto.randomUUID(),
     title: input.title,
@@ -131,6 +132,8 @@ function handleAddScreen(
   return {
     content: `Added screen "${screen.title}" (id: ${screen.id}) to concept ${input.concept_id}. Thumbnail is rendering.`,
     description: `Added screen: ${screen.title}`,
+    conceptId: input.concept_id,
+    screenId: screen.id,
   };
 }
 
