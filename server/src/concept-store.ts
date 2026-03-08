@@ -71,6 +71,80 @@ export class ConceptStore {
     return concept.screens.find((s) => s.id === screenId);
   }
 
+  deleteConcept(slug: string, conceptId: string): boolean {
+    const concepts = this.concepts.get(slug);
+    if (!concepts) return false;
+    const idx = concepts.findIndex((c) => c.id === conceptId);
+    if (idx === -1) return false;
+    concepts.splice(idx, 1);
+    void this.persist(slug);
+    return true;
+  }
+
+  deleteScreen(slug: string, conceptId: string, screenId: string): boolean {
+    const concepts = this.concepts.get(slug);
+    if (!concepts) return false;
+    const concept = concepts.find((c) => c.id === conceptId);
+    if (!concept) return false;
+    const idx = concept.screens.findIndex((s) => s.id === screenId);
+    if (idx === -1) return false;
+    concept.screens.splice(idx, 1);
+    void this.persist(slug);
+    return true;
+  }
+
+  updateConcept(
+    slug: string,
+    conceptId: string,
+    fields: { title?: string; description?: string },
+  ): boolean {
+    const concepts = this.concepts.get(slug);
+    if (!concepts) return false;
+    const concept = concepts.find((c) => c.id === conceptId);
+    if (!concept) return false;
+    if (fields.title !== undefined) concept.title = fields.title;
+    if (fields.description !== undefined) concept.description = fields.description;
+    void this.persist(slug);
+    return true;
+  }
+
+  updateScreen(
+    slug: string,
+    conceptId: string,
+    screenId: string,
+    fields: { title?: string; description?: string },
+  ): Screen | undefined {
+    const concepts = this.concepts.get(slug);
+    if (!concepts) return undefined;
+    const concept = concepts.find((c) => c.id === conceptId);
+    if (!concept) return undefined;
+    const screen = concept.screens.find((s) => s.id === screenId);
+    if (!screen) return undefined;
+    if (fields.title !== undefined) screen.title = fields.title;
+    if (fields.description !== undefined) screen.description = fields.description;
+    void this.persist(slug);
+    return screen;
+  }
+
+  replaceScreenHtml(
+    slug: string,
+    conceptId: string,
+    screenId: string,
+    oldText: string,
+    newText: string,
+  ): Screen | false {
+    const concepts = this.concepts.get(slug);
+    if (!concepts) return false;
+    const concept = concepts.find((c) => c.id === conceptId);
+    if (!concept) return false;
+    const screen = concept.screens.find((s) => s.id === screenId);
+    if (!screen) return false;
+    if (!screen.html.includes(oldText)) return false;
+    screen.html = screen.html.replace(oldText, newText);
+    void this.persist(slug);
+    return screen;
+  }
+
   private async persist(slug: string): Promise<void> {
     if (!this.dataDir) return;
     const concepts = this.concepts.get(slug);

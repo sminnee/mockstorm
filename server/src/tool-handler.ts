@@ -53,6 +53,42 @@ export function handleToolCall(
         conceptStore,
         dataDir,
       );
+    case "delete_concept":
+      return handleDeleteConcept(toolInput as { concept_id: string }, slug, conceptStore, hub);
+    case "delete_screen":
+      return handleDeleteScreen(
+        toolInput as { concept_id: string; screen_id: string },
+        slug,
+        conceptStore,
+        hub,
+      );
+    case "edit_concept":
+      return handleEditConcept(
+        toolInput as { concept_id: string; title?: string; description?: string },
+        slug,
+        conceptStore,
+        hub,
+      );
+    case "edit_screen_meta":
+      return handleEditScreenMeta(
+        toolInput as {
+          concept_id: string;
+          screen_id: string;
+          title?: string;
+          description?: string;
+        },
+        slug,
+        conceptStore,
+        hub,
+      );
+    case "edit_screen":
+      return handleEditScreen(
+        toolInput as { concept_id: string; screen_id: string; old_text: string; new_text: string },
+        slug,
+        conceptStore,
+        hub,
+        enqueueRender,
+      );
     default:
       return {
         content: `Unknown tool: ${toolName}`,
@@ -167,6 +203,162 @@ function handleListConcepts(
   return {
     content: lines.join("\n"),
     description: `Listed ${concepts.length} concept(s)`,
+  };
+}
+
+function handleDeleteConcept(
+  input: { concept_id: string },
+  slug: string,
+  conceptStore: ConceptStore,
+  hub: WorkspaceHub,
+): { content: string; description: string; conceptId: string } {
+  const deleted = conceptStore.deleteConcept(slug, input.concept_id);
+  if (!deleted) {
+    return {
+      content: `Error: concept ${input.concept_id} not found`,
+      description: "Failed to delete concept: not found",
+      conceptId: input.concept_id,
+    };
+  }
+  const msg: ServerMessage = { type: "conceptDeleted", conceptId: input.concept_id };
+  hub.broadcast(slug, msg);
+  return {
+    content: `Deleted concept ${input.concept_id}`,
+    description: "Deleted concept",
+    conceptId: input.concept_id,
+  };
+}
+
+function handleDeleteScreen(
+  input: { concept_id: string; screen_id: string },
+  slug: string,
+  conceptStore: ConceptStore,
+  hub: WorkspaceHub,
+): { content: string; description: string; conceptId: string; screenId: string } {
+  const deleted = conceptStore.deleteScreen(slug, input.concept_id, input.screen_id);
+  if (!deleted) {
+    return {
+      content: `Error: screen ${input.screen_id} not found in concept ${input.concept_id}`,
+      description: "Failed to delete screen: not found",
+      conceptId: input.concept_id,
+      screenId: input.screen_id,
+    };
+  }
+  const msg: ServerMessage = {
+    type: "screenDeleted",
+    conceptId: input.concept_id,
+    screenId: input.screen_id,
+  };
+  hub.broadcast(slug, msg);
+  return {
+    content: `Deleted screen ${input.screen_id} from concept ${input.concept_id}`,
+    description: "Deleted screen",
+    conceptId: input.concept_id,
+    screenId: input.screen_id,
+  };
+}
+
+function handleEditConcept(
+  input: { concept_id: string; title?: string; description?: string },
+  slug: string,
+  conceptStore: ConceptStore,
+  hub: WorkspaceHub,
+): { content: string; description: string; conceptId: string } {
+  const fields: { title?: string; description?: string } = {};
+  if (input.title !== undefined) fields.title = input.title;
+  if (input.description !== undefined) fields.description = input.description;
+  const updated = conceptStore.updateConcept(slug, input.concept_id, fields);
+  if (!updated) {
+    return {
+      content: `Error: concept ${input.concept_id} not found`,
+      description: "Failed to edit concept: not found",
+      conceptId: input.concept_id,
+    };
+  }
+  const msg: ServerMessage = {
+    type: "conceptUpdated",
+    conceptId: input.concept_id,
+    ...fields,
+  };
+  hub.broadcast(slug, msg);
+  return {
+    content: `Updated concept ${input.concept_id}`,
+    description: "Updated concept",
+    conceptId: input.concept_id,
+  };
+}
+
+function handleEditScreenMeta(
+  input: { concept_id: string; screen_id: string; title?: string; description?: string },
+  slug: string,
+  conceptStore: ConceptStore,
+  hub: WorkspaceHub,
+): { content: string; description: string; conceptId: string; screenId: string } {
+  const fields: { title?: string; description?: string } = {};
+  if (input.title !== undefined) fields.title = input.title;
+  if (input.description !== undefined) fields.description = input.description;
+  const screen = conceptStore.updateScreen(slug, input.concept_id, input.screen_id, fields);
+  if (!screen) {
+    return {
+      content: `Error: screen ${input.screen_id} not found in concept ${input.concept_id}`,
+      description: "Failed to edit screen: not found",
+      conceptId: input.concept_id,
+      screenId: input.screen_id,
+    };
+  }
+  const msg: ServerMessage = {
+    type: "screenUpdated",
+    conceptId: input.concept_id,
+    screen,
+  };
+  hub.broadcast(slug, msg);
+  return {
+    content: `Updated screen ${input.screen_id}`,
+    description: "Updated screen metadata",
+    conceptId: input.concept_id,
+    screenId: input.screen_id,
+  };
+}
+
+function handleEditScreen(
+  input: { concept_id: string; screen_id: string; old_text: string; new_text: string },
+  slug: string,
+  conceptStore: ConceptStore,
+  hub: WorkspaceHub,
+  enqueueRender: (job: RenderJob) => void,
+): { content: string; description: string; conceptId: string; screenId: string } {
+  const screen = conceptStore.replaceScreenHtml(
+    slug,
+    input.concept_id,
+    input.screen_id,
+    input.old_text,
+    input.new_text,
+  );
+  if (screen === false) {
+    return {
+      content: `Error: could not find old_text in screen ${input.screen_id} HTML. Use list_concepts or view_screen to check the current HTML.`,
+      description: "Failed to edit screen HTML: text not found",
+      conceptId: input.concept_id,
+      screenId: input.screen_id,
+    };
+  }
+  const msg: ServerMessage = {
+    type: "screenUpdated",
+    conceptId: input.concept_id,
+    screen,
+  };
+  hub.broadcast(slug, msg);
+  enqueueRender({
+    slug,
+    conceptId: input.concept_id,
+    screenId: screen.id,
+    html: screen.html,
+  });
+  return {
+    content: "Updated screen HTML and re-rendering thumbnail.",
+    description: "Edited screen HTML",
+    conceptId: input.concept_id,
+    screenId: screen.id,
   };
 }
 

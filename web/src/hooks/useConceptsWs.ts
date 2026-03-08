@@ -41,6 +41,43 @@ export function useConceptsWs(wsRef: RefObject<WebSocket | null>): {
             ),
           );
           break;
+        case "conceptDeleted":
+          setConcepts((prev) => prev.filter((c) => c.id !== msg.conceptId));
+          break;
+        case "screenDeleted":
+          setConcepts((prev) =>
+            prev.map((c) =>
+              c.id === msg.conceptId
+                ? { ...c, screens: c.screens.filter((s) => s.id !== msg.screenId) }
+                : c,
+            ),
+          );
+          break;
+        case "conceptUpdated":
+          setConcepts((prev) =>
+            prev.map((c) =>
+              c.id === msg.conceptId
+                ? {
+                    ...c,
+                    ...(msg.title !== undefined && { title: msg.title }),
+                    ...(msg.description !== undefined && { description: msg.description }),
+                  }
+                : c,
+            ),
+          );
+          break;
+        case "screenUpdated":
+          setConcepts((prev) =>
+            prev.map((c) =>
+              c.id === msg.conceptId
+                ? {
+                    ...c,
+                    screens: c.screens.map((s) => (s.id === msg.screen.id ? msg.screen : s)),
+                  }
+                : c,
+            ),
+          );
+          break;
       }
     }
 
