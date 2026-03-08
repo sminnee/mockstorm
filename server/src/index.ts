@@ -24,6 +24,14 @@ export function createApp(store: WorkspaceStore, dataDir: string) {
     return c.json({ slug: workspace.slug, workspace }, 201);
   });
 
+  app.post("/api/workspaces/info", async (c) => {
+    const body = await c.req.json<{ slugs: string[] }>();
+    const workspaces = store.getMany(body.slugs);
+    return c.json(
+      workspaces.map((w) => ({ slug: w.slug, title: w.title, description: w.description })),
+    );
+  });
+
   app.get("/api/workspaces/:slug", (c) => {
     const slug = c.req.param("slug");
     const workspace = store.get(slug);

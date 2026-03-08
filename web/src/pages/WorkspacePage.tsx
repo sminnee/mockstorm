@@ -1,11 +1,13 @@
-import { AppShell, Container, TextInput, Textarea, Title } from "@mantine/core";
+import { ActionIcon, AppShell, Container, TextInput, Textarea, Title } from "@mantine/core";
 import { useDebouncedCallback } from "@mantine/hooks";
+import { IconHome } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
-import { Outlet, useParams } from "react-router-dom";
+import { Link, Outlet, useParams } from "react-router-dom";
 import { ChatSidebar } from "../components/ChatSidebar";
 import { WorkspaceProvider } from "../contexts/WorkspaceContext";
 import { useConceptsWs } from "../hooks/useConceptsWs";
 import { useWorkspaceWs } from "../hooks/useWorkspaceWs";
+import { rememberWorkspace } from "../lib/remembered-workspaces";
 
 export function WorkspacePage() {
   const { slug } = useParams<{ slug: string }>();
@@ -18,6 +20,7 @@ export function WorkspacePage() {
     if (workspace) {
       setTitle(workspace.title);
       setDescription(workspace.description);
+      rememberWorkspace(workspace.slug);
     }
   }, [workspace]);
 
@@ -44,6 +47,9 @@ export function WorkspacePage() {
           <ChatSidebar wsRef={wsRef} />
         </AppShell.Navbar>
         <AppShell.Main>
+          <ActionIcon variant="subtle" component={Link} to="/" mb="xs" aria-label="Home">
+            <IconHome size={20} />
+          </ActionIcon>
           <TextInput
             size="xl"
             value={title}
