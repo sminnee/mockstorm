@@ -2,6 +2,7 @@ import type http from "node:http";
 import type { Duplex } from "node:stream";
 import type { ClientMessage, ServerMessage } from "@mockstorm/shared";
 import { type WebSocket, WebSocketServer } from "ws";
+import { WorkspaceHub } from "./workspace-hub";
 import type { WorkspaceStore } from "./workspace-store";
 
 interface UpgradeEmitter {
@@ -13,7 +14,7 @@ interface UpgradeEmitter {
 
 export function attachWsServer(httpServer: UpgradeEmitter, store: WorkspaceStore): void {
   const wss = new WebSocketServer({ noServer: true });
-  const clients = new Map<string, Set<WebSocket>>();
+  const hub = new WorkspaceHub();
 
   httpServer.on("upgrade", (req, socket, head) => {
     const url = req.url ?? "";
@@ -35,8 +36,7 @@ export function attachWsServer(httpServer: UpgradeEmitter, store: WorkspaceStore
       return;
     }
 
-    if (!clients.has(slug)) clients.set(slug, new Set());
-    clients.get(slug)?.add(ws);
+    hub.subscribe(slug, ws);
 
     const initMsg: ServerMessage = { type: "init", workspace };
     ws.send(JSON.stringify(initMsg));
@@ -56,16 +56,11 @@ export function attachWsServer(httpServer: UpgradeEmitter, store: WorkspaceStore
       store.update(slug, fields);
 
       const updateMsg: ServerMessage = { type: "workspaceUpdated", ...fields };
-      const payload = JSON.stringify(updateMsg);
-      for (const client of clients.get(slug) ?? []) {
-        if (client.readyState === client.OPEN) {
-          client.send(payload);
-        }
-      }
+      hub.broadcast(slug, updateMsg, ws);
     });
 
     ws.on("close", () => {
-      clients.get(slug)?.delete(ws);
+      hub.unsubscribe(slug, ws);
     });
   });
 }

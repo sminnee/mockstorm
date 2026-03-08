@@ -1,11 +1,21 @@
 import { Container, TextInput, Textarea, Title } from "@mantine/core";
 import { useDebouncedCallback } from "@mantine/hooks";
+import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useWorkspaceWs } from "../hooks/useWorkspaceWs";
 
 export function WorkspacePage() {
   const { slug } = useParams<{ slug: string }>();
   const { workspace, updateWorkspace } = useWorkspaceWs(slug ?? "");
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+
+  useEffect(() => {
+    if (workspace) {
+      setTitle(workspace.title);
+      setDescription(workspace.description);
+    }
+  }, [workspace]);
 
   const handleTitleChange = useDebouncedCallback((value: string) => {
     updateWorkspace({ title: value });
@@ -27,15 +37,21 @@ export function WorkspacePage() {
     <Container mt="xl">
       <TextInput
         size="xl"
-        defaultValue={workspace.title}
-        onChange={(e) => handleTitleChange(e.currentTarget.value)}
+        value={title}
+        onChange={(e) => {
+          setTitle(e.currentTarget.value);
+          handleTitleChange(e.currentTarget.value);
+        }}
         mb="md"
         styles={{ input: { fontWeight: 700, fontSize: "1.5rem" } }}
       />
       <Textarea
         placeholder="Add a description…"
-        defaultValue={workspace.description}
-        onChange={(e) => handleDescriptionChange(e.currentTarget.value)}
+        value={description}
+        onChange={(e) => {
+          setDescription(e.currentTarget.value);
+          handleDescriptionChange(e.currentTarget.value);
+        }}
         minRows={4}
         autosize
       />
