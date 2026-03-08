@@ -127,6 +127,23 @@ export class ConceptStore {
     return screen;
   }
 
+  setScreenHtml(
+    slug: string,
+    conceptId: string,
+    screenId: string,
+    html: string,
+  ): Screen | undefined {
+    const concepts = this.concepts.get(slug);
+    if (!concepts) return undefined;
+    const concept = concepts.find((c) => c.id === conceptId);
+    if (!concept) return undefined;
+    const screen = concept.screens.find((s) => s.id === screenId);
+    if (!screen) return undefined;
+    screen.html = html;
+    void this.persist(slug);
+    return screen;
+  }
+
   replaceScreenHtml(
     slug: string,
     conceptId: string,

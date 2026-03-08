@@ -6,6 +6,7 @@ import type { ClientMessage, ServerMessage } from "@mockstorm/shared";
 import { type WebSocket, WebSocketServer } from "ws";
 import type { ChatStore } from "./chat-store";
 import type { ConceptStore } from "./concept-store";
+import { runRenderAgent } from "./render-agent";
 import type { Renderer } from "./renderer";
 import { SYSTEM_PROMPT } from "./system-prompt";
 import { type RenderJob, handleToolCall } from "./tool-handler";
@@ -378,34 +379,178 @@ async function runToolLoop(
     // Execute tool calls and collect results
     const toolResults: Anthropic.Messages.ToolResultBlockParam[] = [];
     for (const tool of toolUseBlocks) {
-      const enqueue = (job: RenderJob) => renderer.enqueue(job);
-      const result = await handleToolCall(
-        tool.name,
-        tool.input,
-        slug,
-        conceptStore,
-        hub,
-        enqueue,
-        dataDir,
-      );
+      if (tool.name === "render_screen") {
+        const input = tool.input as {
+          concept_id: string;
+          screen_title: string;
+          screen_description: string;
+          layout_instructions: string;
+          viewport?: string;
+          existing_screen_id?: string;
+        };
+        const viewport = (input.viewport ?? "laptop") as import("@mockstorm/shared").ViewportPreset;
 
-      // Broadcast tool call to chat UI
-      const toolCallMsg: ServerMessage = {
-        type: "chatToolCall",
-        messageId,
-        toolName: tool.name,
-        args: tool.input,
-        result: result.description,
-        ...(result.conceptId ? { conceptId: result.conceptId } : {}),
-        ...(result.screenId ? { screenId: result.screenId } : {}),
-      };
-      hub.broadcast(slug, toolCallMsg);
+        // Broadcast activity indicator
+        hub.broadcast(slug, {
+          type: "chatToolCall",
+          messageId,
+          toolName: "render_screen",
+          args: tool.input,
+          result: "Rendering screen...",
+          conceptId: input.concept_id,
+        });
 
-      toolResults.push({
-        type: "tool_result",
-        tool_use_id: tool.id,
-        content: result.content ?? "",
-      });
+        try {
+          // Get existing HTML if editing
+          let existingHtml: string | undefined;
+          if (input.existing_screen_id) {
+            const existingScreen = conceptStore.getScreen(
+              slug,
+              input.concept_id,
+              input.existing_screen_id,
+            );
+            existingHtml = existingScreen?.html;
+          }
+
+          const { html, summary } = await runRenderAgent({
+            slug,
+            conceptId: input.concept_id,
+            instructions: input.layout_instructions,
+            viewport,
+            renderer,
+            ...(existingHtml !== undefined ? { existingHtml } : {}),
+          });
+
+          let resultText: string;
+          let screenId: string;
+
+          if (input.existing_screen_id) {
+            // Edit existing screen
+            screenId = input.existing_screen_id;
+            const screen = conceptStore.setScreenHtml(slug, input.concept_id, screenId, html);
+            if (!screen) {
+              toolResults.push({
+                type: "tool_result",
+                tool_use_id: tool.id,
+                content: `Error: screen ${screenId} not found in concept ${input.concept_id}`,
+                is_error: true,
+              });
+              continue;
+            }
+            // Update title/description if provided
+            conceptStore.updateScreen(slug, input.concept_id, screenId, {
+              title: input.screen_title,
+              description: input.screen_description,
+            });
+            // Re-render final version
+            renderer.enqueue({
+              slug,
+              conceptId: input.concept_id,
+              screenId,
+              html,
+              viewport,
+            });
+            const updatedScreen = conceptStore.getScreen(slug, input.concept_id, screenId);
+            if (updatedScreen) {
+              hub.broadcast(slug, {
+                type: "screenUpdated",
+                conceptId: input.concept_id,
+                screen: updatedScreen,
+              });
+            }
+            resultText = `Updated screen "${input.screen_title}" (id: ${screenId}). ${summary}`;
+          } else {
+            // Create new screen
+            const newScreen: import("@mockstorm/shared").Screen = {
+              id: crypto.randomUUID(),
+              title: input.screen_title,
+              description: input.screen_description,
+              html,
+              viewport,
+              thumbnailUrl: null,
+              createdAt: new Date().toISOString(),
+            };
+            screenId = newScreen.id;
+            const added = conceptStore.addScreen(slug, input.concept_id, newScreen);
+            if (!added) {
+              toolResults.push({
+                type: "tool_result",
+                tool_use_id: tool.id,
+                content: `Error: concept ${input.concept_id} not found`,
+                is_error: true,
+              });
+              continue;
+            }
+            hub.broadcast(slug, {
+              type: "screenAdded",
+              conceptId: input.concept_id,
+              screen: newScreen,
+            });
+            renderer.enqueue({
+              slug,
+              conceptId: input.concept_id,
+              screenId,
+              html,
+              viewport,
+            });
+            resultText = `Created screen "${input.screen_title}" (id: ${screenId}). ${summary}`;
+          }
+
+          // Broadcast final tool call result
+          hub.broadcast(slug, {
+            type: "chatToolCall",
+            messageId,
+            toolName: "render_screen",
+            args: tool.input,
+            result: resultText,
+            conceptId: input.concept_id,
+            screenId,
+          });
+
+          toolResults.push({
+            type: "tool_result",
+            tool_use_id: tool.id,
+            content: resultText,
+          });
+        } catch (err) {
+          const errorMsg = err instanceof Error ? err.message : String(err);
+          toolResults.push({
+            type: "tool_result",
+            tool_use_id: tool.id,
+            content: `Error rendering screen: ${errorMsg}`,
+            is_error: true,
+          });
+        }
+      } else {
+        const enqueue = (job: RenderJob) => renderer.enqueue(job);
+        const result = await handleToolCall(
+          tool.name,
+          tool.input,
+          slug,
+          conceptStore,
+          hub,
+          enqueue,
+          dataDir,
+        );
+
+        // Broadcast tool call to chat UI
+        const toolCallMsg: ServerMessage = {
+          type: "chatToolCall",
+          messageId,
+          toolName: tool.name,
+          args: tool.input,
+          result: result.description,
+          ...(result.conceptId ? { conceptId: result.conceptId } : {}),
+          ...(result.screenId ? { screenId: result.screenId } : {}),
+        };
+        hub.broadcast(slug, toolCallMsg);
+
+        toolResults.push({
+          type: "tool_result",
+          tool_use_id: tool.id,
+          content: result.content ?? "",
+        });
+      }
     }
 
     // Save assistant + tool_result messages to raw history

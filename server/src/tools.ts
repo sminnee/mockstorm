@@ -17,34 +17,42 @@ export const TOOLS: Anthropic.Messages.Tool[] = [
     },
   },
   {
-    name: "add_screen",
+    name: "render_screen",
     description:
-      "Add an HTML mockup screen to a concept. The HTML fragment will be rendered to a thumbnail image.",
+      "Create or edit a screen mockup. A specialist renderer generates HTML wireframes from your layout instructions and visually verifies the result.",
     input_schema: {
       type: "object" as const,
       properties: {
         concept_id: {
           type: "string",
-          description: "ID of the concept to add the screen to",
+          description: "ID of the concept to add/update the screen in",
         },
-        title: { type: "string", description: "Title for the screen" },
-        description: {
+        screen_title: {
+          type: "string",
+          description: "Title for the screen",
+        },
+        screen_description: {
           type: "string",
           description: "Brief description of what the screen shows",
         },
-        html: {
+        layout_instructions: {
           type: "string",
           description:
-            "HTML fragment using wireframe utility classes. Wrap content in a div with class 'screen'.",
+            "Detailed layout description for the renderer: page structure, sections, content, navigation, and specific requirements. Be as descriptive as possible.",
         },
         viewport: {
           type: "string",
           enum: ["mobile", "tablet", "laptop", "large"],
           description:
-            "Target viewport size for the screen. Defaults to 'laptop'. Use 'mobile' (375px), 'tablet' (768px), 'laptop' (1280px), or 'large' (1920px).",
+            "Target viewport size. Defaults to 'laptop'. Use 'mobile' (375px), 'tablet' (768px), 'laptop' (1280px), or 'large' (1920px).",
+        },
+        existing_screen_id: {
+          type: "string",
+          description:
+            "If editing an existing screen, provide its ID. The renderer will modify the existing HTML based on the instructions.",
         },
       },
-      required: ["concept_id", "title", "description", "html"],
+      required: ["concept_id", "screen_title", "screen_description", "layout_instructions"],
     },
   },
   {
@@ -159,33 +167,6 @@ export const TOOLS: Anthropic.Messages.Tool[] = [
         },
       },
       required: ["concept_id", "screen_id"],
-    },
-  },
-  {
-    name: "edit_screen",
-    description:
-      "Edit a screen's HTML by performing a text search-and-replace. Finds the first occurrence of old_text in the screen's HTML and replaces it with new_text. Use list_concepts or view_screen to see the current HTML before editing.",
-    input_schema: {
-      type: "object" as const,
-      properties: {
-        concept_id: {
-          type: "string",
-          description: "ID of the concept containing the screen",
-        },
-        screen_id: {
-          type: "string",
-          description: "ID of the screen to edit",
-        },
-        old_text: {
-          type: "string",
-          description: "Text to find in the screen's HTML",
-        },
-        new_text: {
-          type: "string",
-          description: "Text to replace old_text with",
-        },
-      },
-      required: ["concept_id", "screen_id", "old_text", "new_text"],
     },
   },
 ];
