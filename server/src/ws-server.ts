@@ -366,7 +366,7 @@ async function runToolLoop(
     const toolResults: Anthropic.Messages.ToolResultBlockParam[] = [];
     for (const tool of toolUseBlocks) {
       const enqueue = (job: RenderJob) => renderer.enqueue(job);
-      const result = handleToolCall(
+      const result = await handleToolCall(
         tool.name,
         tool.input,
         slug,

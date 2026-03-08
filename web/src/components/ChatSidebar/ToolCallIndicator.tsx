@@ -30,11 +30,22 @@ export function ToolCallIndicator({ toolCall }: ToolCallIndicatorProps) {
 }
 
 function getToolLink(toolCall: ToolCallInfo, slug: string): string | null {
-  if (toolCall.toolName === "add_concept" && toolCall.conceptId) {
-    return `/${slug}/concepts/${toolCall.conceptId}`;
+  const { toolName, conceptId, screenId } = toolCall;
+  if (!conceptId) return null;
+
+  switch (toolName) {
+    case "add_concept":
+    case "edit_concept":
+      return `/${slug}/concepts/${conceptId}`;
+    case "add_screen":
+    case "edit_screen":
+    case "edit_screen_meta":
+      return screenId ? `/${slug}/concepts/${conceptId}/screens/${screenId}` : null;
+    case "delete_screen":
+      return `/${slug}/concepts/${conceptId}`;
+    case "delete_concept":
+      return null;
+    default:
+      return null;
   }
-  if (toolCall.toolName === "add_screen" && toolCall.conceptId && toolCall.screenId) {
-    return `/${slug}/concepts/${toolCall.conceptId}/screens/${toolCall.screenId}`;
-  }
-  return null;
 }

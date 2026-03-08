@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import type Anthropic from "@anthropic-ai/sdk";
 import type { Concept, Screen, ServerMessage } from "@mockstorm/shared";
@@ -14,7 +15,7 @@ export interface RenderJob {
 
 type ToolResult = Anthropic.Messages.ToolResultBlockParam["content"];
 
-export function handleToolCall(
+export async function handleToolCall(
   toolName: string,
   toolInput: Record<string, unknown>,
   slug: string,
@@ -22,7 +23,7 @@ export function handleToolCall(
   hub: WorkspaceHub,
   enqueueRender: (job: RenderJob) => void,
   dataDir: string,
-): { content: ToolResult; description: string; conceptId?: string; screenId?: string } {
+): Promise<{ content: ToolResult; description: string; conceptId?: string; screenId?: string }> {
   switch (toolName) {
     case "add_concept":
       return handleAddConcept(
@@ -47,7 +48,7 @@ export function handleToolCall(
     case "list_concepts":
       return handleListConcepts(slug, conceptStore);
     case "view_screen":
-      return handleViewScreen(
+      return await handleViewScreen(
         toolInput as { concept_id: string; screen_id: string },
         slug,
         conceptStore,
@@ -362,12 +363,12 @@ function handleEditScreen(
   };
 }
 
-function handleViewScreen(
+async function handleViewScreen(
   input: { concept_id: string; screen_id: string },
   slug: string,
   conceptStore: ConceptStore,
   dataDir: string,
-): { content: ToolResult; description: string } {
+): Promise<{ content: ToolResult; description: string }> {
   const screen = conceptStore.getScreen(slug, input.concept_id, input.screen_id);
   if (!screen) {
     return {
@@ -383,15 +384,10 @@ function handleViewScreen(
     };
   }
 
-  // Read the thumbnail file synchronously-ish — return a promise-like structure
-  // Actually, since handleToolCall is sync, we need to handle this differently.
-  // For now, return the HTML content as text. The async version would read the file.
   const thumbnailPath = join(dataDir, "workspaces", slug, "thumbnails", `${input.screen_id}.png`);
 
   try {
-    // Use synchronous read for simplicity
-    const { readFileSync } = require("node:fs");
-    const data = readFileSync(thumbnailPath) as Buffer;
+    const data = await readFile(thumbnailPath);
     const base64 = data.toString("base64");
     return {
       content: [
