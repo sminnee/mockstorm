@@ -78,6 +78,11 @@ export function ChatMessageList({ messages, toolCalls, isStreaming }: ChatMessag
             {...(msg.role === "user" ? { c: "white" } : {})}
             maw="85%"
           >
+            {msg.imageBase64 && msg.role === "user" && (
+              <Text size="xs" c="blue.2" mb={4}>
+                📎 Screenshot attached
+              </Text>
+            )}
             <Text size="sm" style={{ whiteSpace: "pre-wrap" }}>
               {msg.content}
             </Text>

@@ -106,6 +106,7 @@ export function attachWsServer(
           dataDir,
           msg.conceptId,
           msg.screenId,
+          msg.imageBase64,
         );
       } else if (msg.type === "chatStop") {
         console.log(`[ws] chatStop – slug=${slug}`);
@@ -136,6 +137,7 @@ async function handleChatSend(
   dataDir: string,
   conceptId?: string,
   screenId?: string,
+  imageBase64?: string,
 ): Promise<void> {
   const userMessage = {
     id: crypto.randomUUID(),
@@ -144,12 +146,16 @@ async function handleChatSend(
     createdAt: new Date().toISOString(),
     ...(conceptId ? { conceptId } : {}),
     ...(screenId ? { screenId } : {}),
+    ...(imageBase64 ? { imageBase64 } : {}),
   };
   chatStore.addMessage(slug, userMessage);
   hub.broadcast(slug, { type: "chatUserMessage", message: userMessage });
 
   // Build context-aware API message content
-  const apiContent: Array<{ type: "text"; text: string }> = [];
+  const apiContent: Array<
+    | { type: "text"; text: string }
+    | { type: "image"; source: { type: "base64"; media_type: "image/png"; data: string } }
+  > = [];
 
   if (conceptId) {
     const concepts = conceptStore.getConcepts(slug);
@@ -163,6 +169,13 @@ async function handleChatSend(
       contextText += "]";
       apiContent.push({ type: "text", text: contextText });
     }
+  }
+
+  if (imageBase64) {
+    apiContent.push({
+      type: "image",
+      source: { type: "base64", media_type: "image/png", data: imageBase64 },
+    });
   }
 
   apiContent.push({ type: "text", text: content });

@@ -6,6 +6,12 @@ interface WorkspaceContextValue {
   concepts: Concept[];
   wsRef: RefObject<WebSocket | null>;
   updateWorkspace: (fields: Partial<Pick<Workspace, "title" | "description">>) => void;
+  annotationDataUrl: string | null;
+  setAnnotationDataUrl: (url: string | null) => void;
+  getAnnotationImage: (() => Promise<string>) | null;
+  setGetAnnotationImage: (fn: (() => Promise<string>) | null) => void;
+  hasAnnotations: boolean;
+  setHasAnnotations: (v: boolean) => void;
 }
 
 const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);

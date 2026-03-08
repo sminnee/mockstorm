@@ -30,6 +30,7 @@ export interface ChatMessage {
   createdAt: string;
   conceptId?: string;
   screenId?: string;
+  imageBase64?: string;
 }
 
 export interface ToolCallInfo {
@@ -43,7 +44,13 @@ export interface ToolCallInfo {
 
 export type ClientMessage =
   | { type: "workspaceUpdate"; title?: string; description?: string }
-  | { type: "chatSend"; content: string; conceptId?: string; screenId?: string }
+  | {
+      type: "chatSend";
+      content: string;
+      conceptId?: string;
+      screenId?: string;
+      imageBase64?: string;
+    }
   | { type: "chatStop" };
 
 export type ServerMessage =
